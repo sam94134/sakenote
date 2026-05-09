@@ -636,199 +636,180 @@ function drawPhoto() {
 }
 
 // ── Trace bottle outline ──
-// Strategy: background-removal → bottle mask → contour ring → expand outward
+// Strategy: Canvas-native blur-threshold dilation — no pixel loops, no jaggies.
 //
-// 1. Render photo on white canvas
-// 2. Flood-fill from image corners to find background colour → build bottle mask
-//    (any pixel similar to bg colour = background; rest = bottle)
-// 3. Erode mask by `expand` px → subtract from original mask → get contour ring
-// 4. Apply line colour + lineWidth stroke along the ring
-// 5. Labels and text inside bottle are completely ignored — only the silhouette matters
+// 1. Draw photo on offscreen canvas
+// 2. Flood-fill from corners → binary bottle mask (1=bottle, 0=bg)
+// 3. Paint mask as solid white on black canvas
+// 4. CSS blur(expandPx) → soft halo around silhouette
+// 5. Threshold the blurred result → smooth dilated mask
+// 6. Subtract original (erode) to get only the outer ring
+// 7. Colour + draw to lineCanvas
 
 function traceBottle() {
   if (!uploadedImage || !lineCtx) return;
 
-  const expand  = parseInt(document.getElementById('expandSlider').value);
-  const lw      = parseFloat(document.getElementById('lineWidthSlider').value);
-  const bgTol   = (100 - parseInt(document.getElementById('traceSlider').value)) * 1.8 + 8;
-  // traceSlider: high value = stricter bg detection (less bg removed)
-  // bgTol range: slider 0→100 maps bgTol 188→8
-  const lc      = hexToRgb(lineColor);
-  const colStr  = `rgb(${lc.r},${lc.g},${lc.b})`;
+  const expandPx = parseInt(document.getElementById('expandSlider').value);
+  const lw       = parseFloat(document.getElementById('lineWidthSlider').value);
+  const bgTolRaw = parseInt(document.getElementById('traceSlider').value);
+  // slider 0-100: high = sensitive (tight bg detection), low = loose
+  const bgTol    = (100 - bgTolRaw) * 2.2 + 12;
+  const lc       = hexToRgb(lineColor);
 
-  // ── 1. Render photo onto white offscreen canvas (IW×IH = image native size) ──
-  const off = document.createElement('canvas');
-  off.width = IW; off.height = IH;
-  const oc = off.getContext('2d');
-  oc.fillStyle = '#ffffff';
-  oc.fillRect(0, 0, IW, IH);
-  // Full-stretch: image fills IW×IH exactly (same aspect since IW/IH derived from image)
-  oc.drawImage(uploadedImage, 0, 0, IW, IH);
-  const imgData = oc.getImageData(0, 0, IW, IH);
-  const px = imgData.data;
+  // ── Step 1: render photo → offscreen at IW×IH ──
+  const src = document.createElement('canvas');
+  src.width = IW; src.height = IH;
+  const sc = src.getContext('2d');
+  sc.drawImage(uploadedImage, 0, 0, IW, IH);
+  const pxData = sc.getImageData(0, 0, IW, IH).data;
 
-  // ── 2. Background removal via flood-fill from all 4 corners ──
-  // Sample background colour from the four corners (average)
-  function sampleCorner(x, y) {
-    const i = (y*W+x)*4;
-    return [px[i], px[i+1], px[i+2]];
+  // ── Step 2: flood-fill background from all 4 borders ──
+  // Sample bg colour from corner 3×3 average
+  function avgCorner(x0, y0) {
+    let r=0,g=0,b=0,n=0;
+    for (let dy=0;dy<3;dy++) for (let dx=0;dx<3;dx++) {
+      const i=((y0+dy)*IW+(x0+dx))*4;
+      r+=pxData[i]; g+=pxData[i+1]; b+=pxData[i+2]; n++;
+    }
+    return [r/n, g/n, b/n];
   }
   const corners = [
-    sampleCorner(0,0), sampleCorner(W-1,0),
-    sampleCorner(0,H-1), sampleCorner(W-1,H-1)
+    avgCorner(0,0), avgCorner(IW-3,0),
+    avgCorner(0,IH-3), avgCorner(IW-3,IH-3)
   ];
-  const bgR = Math.round(corners.reduce((a,c)=>a+c[0],0)/4);
-  const bgG = Math.round(corners.reduce((a,c)=>a+c[1],0)/4);
-  const bgB = Math.round(corners.reduce((a,c)=>a+c[2],0)/4);
+  const bgR = corners.reduce((a,c)=>a+c[0],0)/4;
+  const bgG = corners.reduce((a,c)=>a+c[1],0)/4;
+  const bgB = corners.reduce((a,c)=>a+c[2],0)/4;
 
-  function colourDist(i, r, g, b) {
-    const dr = px[i]-r, dg = px[i+1]-g, db = px[i+2]-b;
-    return Math.sqrt(dr*dr + dg*dg + db*db);
+  function isBg(i) {
+    const dr=pxData[i]-bgR, dg=pxData[i+1]-bgG, db=pxData[i+2]-bgB;
+    return Math.sqrt(dr*dr+dg*dg+db*db) <= bgTol;
   }
 
-  // BFS flood-fill mask (1 = background, 0 = bottle)
-  const bgMask = new Uint8Array(W * H);   // 1 = bg confirmed
-  const queue  = [];
-  const visited = new Uint8Array(W * H);
+  const bgMask  = new Uint8Array(IW * IH);
+  const visited = new Uint8Array(IW * IH);
+  const queue   = [];
 
   function seed(x, y) {
-    const idx = y*W+x;
+    const idx = y*IW+x;
     if (visited[idx]) return;
     visited[idx] = 1;
-    if (colourDist(idx*4, bgR, bgG, bgB) <= bgTol) {
-      bgMask[idx] = 1; queue.push(idx);
-    }
+    if (isBg(idx*4)) { bgMask[idx]=1; queue.push(idx); }
   }
-  // Seed all border pixels
-  for (let x = 0; x < IW; x++) { seed(x, 0); seed(x, IH-1); }
-  for (let y = 1; y < IH-1; y++) { seed(0, y); seed(IW-1, y); }
+  for (let x=0;x<IW;x++) { seed(x,0); seed(x,IH-1); }
+  for (let y=1;y<IH-1;y++) { seed(0,y); seed(IW-1,y); }
 
-  let qi = 0;
-  while (qi < queue.length) {
-    const cur = queue[qi++];
-    const cx = cur % IW, cy = Math.floor(cur / IW);
-    for (const [nx, ny] of [[cx-1,cy],[cx+1,cy],[cx,cy-1],[cx,cy+1]]) {
+  let qi=0;
+  while (qi<queue.length) {
+    const cur=queue[qi++];
+    const cx=cur%IW, cy=Math.floor(cur/IW);
+    for (const [nx,ny] of [[cx-1,cy],[cx+1,cy],[cx,cy-1],[cx,cy+1]]) {
       if (nx<0||nx>=IW||ny<0||ny>=IH) continue;
-      const ni = ny*W+nx;
+      const ni=ny*IW+nx;
       if (visited[ni]) continue;
-      visited[ni] = 1;
-      if (colourDist(ni*4, bgR, bgG, bgB) <= bgTol) {
-        bgMask[ni] = 1; queue.push(ni);
-      }
+      visited[ni]=1;
+      if (isBg(ni*4)) { bgMask[ni]=1; queue.push(ni); }
     }
   }
 
-  // bottle mask = NOT background
-  const bottleMask = new Uint8Array(IW * IH);
-  for (let i = 0; i < IW*IH; i++) bottleMask[i] = bgMask[i] ? 0 : 1;
+  // ── Step 3: paint bottle mask (white=bottle) onto maskCanvas ──
+  const maskC = document.createElement('canvas');
+  maskC.width = IW; maskC.height = IH;
+  const mc = maskC.getContext('2d');
+  const maskImg = mc.createImageData(IW, IH);
+  const md = maskImg.data;
+  for (let i=0;i<IW*IH;i++) {
+    const v = bgMask[i] ? 0 : 255;
+    md[i*4]=md[i*4+1]=md[i*4+2]=v; md[i*4+3]=255;
+  }
+  mc.putImageData(maskImg, 0, 0);
 
-  // ── 3. Morphological operations to get clean contour ring ──
-  // a) Dilate bottleMask by `expand` px → expandedMask
-  // b) Erode bottleMask by 1 px → erodedMask
-  // c) contourMask = expandedMask AND NOT erodedMask
-  //    → only pixels in the ring between (expanded outer) and (eroded inner)
+  // ── Step 4 & 5: blur-threshold to get smooth dilated mask ──
+  // Draw maskCanvas onto a new canvas with CSS blur filter
+  // blur radius = expandPx + half lineWidth → outer edge of ring
+  const outerBlur = Math.max(1, expandPx + lw);
+  const innerBlur = Math.max(0.5, expandPx * 0.6);
 
-  // expand = outward gap from bottle surface
-  // lw     = line thickness
-  // We dilate by (expand + lw) to get a ring that starts at `expand` px outside bottle
-  // Then erode by `expand` to get only the outer ring of thickness ~lw
-  const R_outer = Math.max(1, expand + Math.ceil(lw));   // how far out the ring extends
-  const R_inner = Math.max(0, expand);                    // how far in to cut (= gap distance)
-  // alias for dilate/erode calls
-  const R_exp = R_outer;
-  const R_ero = R_inner;
-
-  function dilate(src, radius) {
-    const dst = new Uint8Array(IW * IH);
-    for (let y = 0; y < IH; y++) {
-      for (let x = 0; x < IW; x++) {
-        if (!src[y*IW+x]) continue;
-        const y0 = Math.max(0, y-radius), y1 = Math.min(IH-1, y+radius);
-        const x0 = Math.max(0, x-radius), x1 = Math.min(IW-1, x+radius);
-        for (let dy = y0; dy <= y1; dy++) {
-          const ry = dy-y;
-          const rxMax = Math.round(Math.sqrt(Math.max(0, radius*radius - ry*ry)));
-          const lx2 = Math.max(x0, x-rxMax), rx2 = Math.min(x1, x+rxMax);
-          for (let dx = lx2; dx <= rx2; dx++) dst[dy*IW+dx] = 1;
-        }
-      }
-    }
-    return dst;
+  function blurThreshold(blurRadius, threshVal) {
+    const tmp = document.createElement('canvas');
+    tmp.width = IW; tmp.height = IH;
+    const tc = tmp.getContext('2d');
+    tc.filter = `blur(${blurRadius}px)`;
+    tc.drawImage(maskC, 0, 0);
+    tc.filter = 'none';
+    // Read back and threshold
+    const tpx = tc.getImageData(0,0,IW,IH).data;
+    const bin = new Uint8Array(IW*IH);
+    for (let i=0;i<IW*IH;i++) bin[i] = tpx[i*4] >= threshVal ? 1 : 0;
+    return bin;
   }
 
-  function erode(src, radius) {
-    const dst = new Uint8Array(IW * IH);
-    for (let y = radius; y < IH-radius; y++) {
-      for (let x = radius; x < IW-radius; x++) {
-        if (!src[y*IW+x]) continue;
-        let allOne = true;
-        outer: for (let dy = -radius; dy <= radius && allOne; dy++) {
-          const rxMax = Math.round(Math.sqrt(Math.max(0, radius*radius - dy*dy)));
-          for (let dx = -rxMax; dx <= rxMax; dx++) {
-            if (!src[(y+dy)*IW+(x+dx)]) { allOne = false; break outer; }
-          }
-        }
-        if (allOne) dst[y*IW+x] = 1;
-      }
-    }
-    return dst;
-  }
+  // Outer ring: heavily blurred → low threshold → wide dilation
+  const outerMask = blurThreshold(outerBlur, 30);
+  // Inner ring: lightly blurred → high threshold → tight to bottle
+  const innerMask = blurThreshold(innerBlur, 200);
 
-  const outerRing = dilate(bottleMask, R_exp);    // bottle + gap + line width
-  // inner boundary = bottle dilated by just the gap (pixels inside this = not drawn)
-  const innerFill = R_ero > 0 ? dilate(bottleMask, R_ero) : bottleMask;
-
-  // contour = pixels in outerRing but NOT in innerFill
-  // = only the ring between `expand` and `expand+lw` px outside bottle
+  // ── Step 6: contour = outerMask AND NOT innerMask ──
   const contour = new Uint8Array(IW * IH);
-  for (let i = 0; i < IW*IH; i++) {
-    contour[i] = (outerRing[i] && !innerFill[i]) ? 1 : 0;
-  }
+  for (let i=0;i<IW*IH;i++) contour[i] = (outerMask[i] && !innerMask[i]) ? 1 : 0;
 
-  // ── 4. Draw contour onto lineCanvas ──
+  // ── Step 7: paint smooth contour onto a tmp canvas, then draw to lineCtx ──
+  // Instead of pixel-painting (jaggies), we:
+  // a) draw contour pixels as white on black onto a small canvas
+  // b) apply slight blur to smooth aliasing
+  // c) composite with chosen colour
+
+  const conC = document.createElement('canvas');
+  conC.width = IW; conC.height = IH;
+  const cc = conC.getContext('2d');
+  const conImg = cc.createImageData(IW, IH);
+  const cd = conImg.data;
+  for (let i=0;i<IW*IH;i++) {
+    if (contour[i]) { cd[i*4]=cd[i*4+1]=cd[i*4+2]=255; cd[i*4+3]=255; }
+  }
+  cc.putImageData(conImg, 0, 0);
+
+  // ── Step 8: draw to lineCanvas with colour tint ──
   lineCtx.clearRect(0, 0, IW, IH);
 
-  const outImg = lineCtx.createImageData(IW, IH);
-  const od = outImg.data;
-
-  for (let i = 0; i < IW*IH; i++) {
-    if (!contour[i]) continue;
-    // Slight per-pixel brightness variation for hand-drawn feel
-    const jitter = (Math.random()-0.5)*18;
-    od[i*4]   = Math.max(0, Math.min(255, lc.r + jitter));
-    od[i*4+1] = Math.max(0, Math.min(255, lc.g + jitter*0.7));
-    od[i*4+2] = Math.max(0, Math.min(255, lc.b + jitter*0.5));
-    od[i*4+3] = Math.min(255, 210 + (Math.random()-0.5)*30);
-  }
-  lineCtx.putImageData(outImg, 0, 0);
-
-  // ── 5. Thicken with lineWidth stroke if lw > 1 ──
-  if (lw > 1) {
-    const tmp2 = document.createElement('canvas');
-    tmp2.width = IW; tmp2.height = IH;
-    const tc2 = tmp2.getContext('2d');
-    tc2.drawImage(document.getElementById('lineCanvas'), 0, 0);
-    lineCtx.clearRect(0, 0, W, H);
-    lineCtx.filter = `blur(${(lw-1)*0.4}px)`;
-    lineCtx.drawImage(tmp2, 0, 0);
-    lineCtx.filter = 'none';
-    lineCtx.globalAlpha = 0.82;
-    lineCtx.drawImage(tmp2, 0, 0);
-    lineCtx.globalAlpha = 1;
-  }
-
-  // ── Subtle hand-drawn brush texture ──
+  // Black base with slight blur for smoothness
   lineCtx.save();
-  lineCtx.globalAlpha = 0.015;
-  for (let i = 0; i < 40; i++) {
-    const x = Math.random()*W, y = Math.random()*H;
-    const l = Math.random()*8+1;
+  lineCtx.filter = `blur(${Math.max(0.4, lw*0.35)}px)`;
+  lineCtx.drawImage(conC, 0, 0);
+  lineCtx.filter = 'none';
+  lineCtx.restore();
+
+  // Tint with chosen line colour using multiply-like composite
+  if (lc.r < 240 || lc.g < 240 || lc.b < 240) {
+    // Colour the white contour: draw a colour rect clipped to contour
+    const colC = document.createElement('canvas');
+    colC.width = IW; colC.height = IH;
+    const colCtx = colC.getContext('2d');
+    // Copy contour
+    colCtx.drawImage(conC, 0, 0);
+    // Multiply blend: where white → replace with colour
+    colCtx.globalCompositeOperation = 'source-atop';
+    colCtx.fillStyle = `rgb(${lc.r},${lc.g},${lc.b})`;
+    colCtx.fillRect(0, 0, IW, IH);
+
+    lineCtx.clearRect(0, 0, IW, IH);
+    lineCtx.save();
+    lineCtx.filter = `blur(${Math.max(0.4, lw*0.35)}px)`;
+    lineCtx.drawImage(colC, 0, 0);
+    lineCtx.filter = 'none';
+    lineCtx.restore();
+  }
+
+  // ── Subtle hand-drawn texture ──
+  lineCtx.save();
+  lineCtx.globalAlpha = 0.012;
+  const colStr = `rgb(${lc.r},${lc.g},${lc.b})`;
+  for (let i=0;i<35;i++) {
+    const x=Math.random()*IW, y=Math.random()*IH, l=Math.random()*8+1;
     lineCtx.beginPath();
-    lineCtx.moveTo(x, y);
+    lineCtx.moveTo(x,y);
     lineCtx.lineTo(x+l*(Math.random()-.5), y+l*(Math.random()-.5));
-    lineCtx.strokeStyle = colStr;
-    lineCtx.lineWidth = Math.random()*1.2;
-    lineCtx.stroke();
+    lineCtx.strokeStyle=colStr; lineCtx.lineWidth=Math.random()*1.2; lineCtx.stroke();
   }
   lineCtx.restore();
 
