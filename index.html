@@ -324,7 +324,7 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
               </div>
             </div>
             <input id="f_name" type="text" placeholder="例：獺祭 二割三分"
-              style="font-size:1.05rem;color:#1a1410" oninput="liveTitle()">
+              style="font-size:1.05rem;color:#1a1410" oninput="liveTitle(); syncPreviewText()">
           </div>
 
           <!-- 酒造 -->
@@ -344,7 +344,7 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
               </div>
             </div>
             <input id="f_brewery" type="text" placeholder="例：旭酒造"
-              style="font-size:1.05rem;color:#1a1410">
+              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()">
           </div>
 
           <!-- 產地 -->
@@ -364,7 +364,7 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
               </div>
             </div>
             <input id="f_origin" type="text" placeholder="例：山口縣岩國市"
-              style="font-size:1.05rem;color:#1a1410">
+              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()">
           </div>
 
           <!-- 年份 -->
@@ -384,7 +384,7 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
               </div>
             </div>
             <input id="f_year" type="text" placeholder="例：令和六年"
-              style="font-size:1.05rem;color:#1a1410">
+              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()">
           </div>
 
           <!-- 釀造類別 -->
@@ -404,7 +404,7 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
               </div>
             </div>
             <input id="f_type" type="text" placeholder="例：純米大吟釀"
-              style="font-size:1.05rem;color:#1a1410">
+              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()">
           </div>
 
           <!-- 精米步合 -->
@@ -424,7 +424,7 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
               </div>
             </div>
             <input id="f_rice" type="text" placeholder="例：23%"
-              style="font-size:1.05rem;color:#1a1410">
+              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()">
           </div>
 
           <!-- 口感品評 -->
@@ -445,7 +445,7 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
             </div>
             <textarea id="f_taste" rows="3"
               placeholder="例：清雅細膩，入口如花香瀰漫，帶梨與白桃果香，酸度優雅，餘韻悠長綿密。"
-              style="font-size:1.0rem;color:#1a1410"></textarea>
+              style="font-size:1.0rem;color:#1a1410" oninput="syncPreviewText()"></textarea>
           </div>
 
         </div><!-- /note-grid -->
@@ -523,6 +523,10 @@ function applyStyle(id, color, size) {
   if (!el) return;
   if (color !== null) { fieldStyles[id].color = color; el.style.color = color; }
   if (size  !== null) { fieldStyles[id].size  = size;  el.style.fontSize = size; }
+  // Live-sync preview if it's open
+  if (document.getElementById('previewCard').classList.contains('visible')) {
+    syncPreviewText();
+  }
 }
 
 // ─── Line color: preset pills ───
@@ -747,45 +751,49 @@ function traceBottle() {
     }
   }
 
-  // ── Outward expansion (morphological dilation) ──
-  // For every detected edge pixel, find the outward normal direction by
-  // computing a local gradient vector, then shift the drawn pixel outward
-  // by `expand` pixels. This creates a gap between the bottle surface and
-  // the drawn line, giving the hand-drawn "floating outline" feel.
+  // ── Outward expansion: silhouette-boundary method ──
+  // Robust for any bottle color (light or dark).
+  // Strategy:
+  //   Per row: find the leftmost and rightmost edge pixels → those are the silhouette boundary.
+  //   Shift them outward by `expand` px horizontally.
+  //   Per column: find topmost and bottommost edge pixels → shift vertically.
+  //   This gives a clean floating outline that never inverts on light bottles.
   const expand = parseInt(document.getElementById('expandSlider').value);
   const finalBin = new Uint8Array(W * H);
 
   if (expand <= 0) {
-    // No expansion: copy directly
     for (let i = 0; i < W*H; i++) finalBin[i] = edgeBin[i];
   } else {
-    // Build a binary fill map of the bottle interior (flood from center-ish point)
-    // using the edgeBin as boundary — this tells us which direction is "outward".
-    // Simple approach: for each edge pixel, compute local intensity gradient direction
-    // (pointing from dark bottle into light background), then offset outward.
-    for (let y = 1; y < H-1; y++) {
-      for (let x = 1; x < W-1; x++) {
-        if (!edgeBin[y*W+x]) continue;
-        // Gradient from blurred image (bright background → dark bottle → outward = +grad direction)
-        const dx = blurred[y*W+(x+1)] - blurred[y*W+(x-1)];
-        const dy = blurred[(y+1)*W+x] - blurred[(y-1)*W+x];
-        const mag = Math.sqrt(dx*dx + dy*dy) || 1;
-        // Outward normal (towards brighter side = outside bottle)
-        const nx = dx / mag;
-        const ny = dy / mag;
-        // Place line pixel offset outward
-        const tx = Math.round(x + nx * expand);
-        const ty = Math.round(y + ny * expand);
-        if (tx >= 0 && tx < W && ty >= 0 && ty < H) {
-          finalBin[ty*W+tx] = 1;
-          // Fill small radius around target for stroke thickness continuity
-          for (let ky = -1; ky <= 1; ky++) {
-            for (let kx = -1; kx <= 1; kx++) {
-              const fx = tx+kx, fy = ty+ky;
-              if (fx >= 0 && fx < W && fy >= 0 && fy < H) finalBin[fy*W+fx] = 1;
-            }
-          }
-        }
+    // Horizontal pass: left/right silhouette per row
+    for (let y = 0; y < H; y++) {
+      let leftX = -1, rightX = -1;
+      for (let x = 0; x < W; x++) {
+        if (edgeBin[y*W+x]) { if (leftX < 0) leftX = x; rightX = x; }
+      }
+      if (leftX < 0) continue;
+      // Shift left edge to the left (outward)
+      const newLeft  = Math.max(0, leftX  - expand);
+      const newRight = Math.min(W-1, rightX + expand);
+      // Draw a short horizontal stroke at each boundary
+      const hw = Math.max(1, Math.round(expand * 0.4)); // stroke half-width
+      for (let dx2 = -hw; dx2 <= hw; dx2++) {
+        const lx = newLeft  + dx2; if (lx >= 0 && lx < W) finalBin[y*W+lx] = 1;
+        const rx = newRight + dx2; if (rx >= 0 && rx < W) finalBin[y*W+rx] = 1;
+      }
+    }
+    // Vertical pass: top/bottom silhouette per column
+    for (let x = 0; x < W; x++) {
+      let topY = -1, botY = -1;
+      for (let y = 0; y < H; y++) {
+        if (edgeBin[y*W+x]) { if (topY < 0) topY = y; botY = y; }
+      }
+      if (topY < 0) continue;
+      const newTop = Math.max(0, topY  - expand);
+      const newBot = Math.min(H-1, botY + expand);
+      const hh = Math.max(1, Math.round(expand * 0.4));
+      for (let dy2 = -hh; dy2 <= hh; dy2++) {
+        const ty2 = newTop + dy2; if (ty2 >= 0 && ty2 < H) finalBin[ty2*W+x] = 1;
+        const by2 = newBot + dy2; if (by2 >= 0 && by2 < H) finalBin[by2*W+x] = 1;
       }
     }
   }
@@ -837,6 +845,10 @@ function traceBottle() {
     lineCtx.stroke();
   }
   lineCtx.restore();
+  // If preview card is open, refresh its canvas too
+  if (document.getElementById('previewCard').classList.contains('visible')) {
+    renderPreviewCanvas();
+  }
 }
 
 function clearLine() { if (lineCtx) lineCtx.clearRect(0, 0, W, H); }
@@ -861,32 +873,52 @@ function clearLine() { if (lineCtx) lineCtx.clearRect(0, 0, W, H); }
 function liveTitle() {
   const v = document.getElementById('f_name').value.trim();
   document.getElementById('noteTitle').textContent = v || '清酒名稱';
+  if (document.getElementById('previewCard').classList.contains('visible')) {
+    syncPreviewText();
+  }
 }
 
-// ─── Preview ───
-function showPreview() {
+// ─── Preview: sync text + style to preview card ───
+function syncPreviewText() {
   const keys = ['name','brewery','origin','year','type','rice','taste'];
   keys.forEach(k => {
     const el  = document.getElementById('prev_'+k);
+    if (!el) return;
     const src = document.getElementById('f_'+k);
-    el.textContent  = src.value.trim() || '—';
-    el.style.color     = fieldStyles['f_'+k].color;
-    el.style.fontSize  = fieldStyles['f_'+k].size;
+    const val = src ? src.value.trim() : '';
+    el.textContent = val || '—';
+    el.style.color    = fieldStyles['f_'+k] ? fieldStyles['f_'+k].color : '#1a1410';
+    el.style.fontSize = fieldStyles['f_'+k] ? fieldStyles['f_'+k].size  : '1.05rem';
+    // Also sync prev_name heading
+    if (k === 'name') {
+      const nameEl = document.getElementById('prev_name');
+      if (nameEl) {
+        nameEl.textContent = val || '—';
+        nameEl.style.color = fieldStyles['f_name'].color;
+      }
+    }
   });
+}
 
+function renderPreviewCanvas() {
   const pvc = document.getElementById('previewCanvas');
-  const pc  = pvc.getContext('2d');
+  if (!pvc) return;
+  const pc = pvc.getContext('2d');
   pc.clearRect(0, 0, 170, 420);
   if (uploadedImage) {
     const s  = Math.min(170/uploadedImage.width, 420/uploadedImage.height);
     const dw = uploadedImage.width*s, dh = uploadedImage.height*s;
-    pc.globalAlpha = 0.12;
+    pc.globalAlpha = 0.15;
     pc.drawImage(uploadedImage, (170-dw)/2, (420-dh)/2, dw, dh);
     pc.globalAlpha = 1;
   }
   pc.drawImage(document.getElementById('filterCanvas'), 0, 0, 170, 420);
-  pc.drawImage(document.getElementById('lineCanvas'), 0, 0, 170, 420);
+  pc.drawImage(document.getElementById('lineCanvas'),   0, 0, 170, 420);
+}
 
+function showPreview() {
+  syncPreviewText();
+  renderPreviewCanvas();
   document.getElementById('previewCard').classList.add('visible');
   document.getElementById('exportBar').classList.add('visible');
   document.getElementById('previewCard').scrollIntoView({behavior:'smooth', block:'start'});
