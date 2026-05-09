@@ -344,7 +344,7 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
               </div>
             </div>
             <input id="f_brewery" type="text" placeholder="例：旭酒造"
-              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()">
+              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()" oninput="syncPreviewText()">
           </div>
 
           <!-- 產地 -->
@@ -364,7 +364,7 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
               </div>
             </div>
             <input id="f_origin" type="text" placeholder="例：山口縣岩國市"
-              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()">
+              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()" oninput="syncPreviewText()">
           </div>
 
           <!-- 年份 -->
@@ -384,7 +384,7 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
               </div>
             </div>
             <input id="f_year" type="text" placeholder="例：令和六年"
-              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()">
+              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()" oninput="syncPreviewText()">
           </div>
 
           <!-- 釀造類別 -->
@@ -404,7 +404,7 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
               </div>
             </div>
             <input id="f_type" type="text" placeholder="例：純米大吟釀"
-              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()">
+              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()" oninput="syncPreviewText()">
           </div>
 
           <!-- 精米步合 -->
@@ -424,7 +424,7 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
               </div>
             </div>
             <input id="f_rice" type="text" placeholder="例：23%"
-              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()">
+              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()" oninput="syncPreviewText()">
           </div>
 
           <!-- 口感品評 -->
@@ -501,11 +501,22 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
 </div>
 
 <script>
-// ─── State ───
+// ── State ──
 let uploadedImage = null;
 let photoCtx = null, lineCtx = null, filterCtx = null;
 const W = 270, H = 510;
 let lineColor = '#1a1410';
+let filterMode = 'none';
+
+const FILTER_COLORS = {
+  dark:  {r:0,   g:0,   b:0  },
+  light: {r:255, g:250, b:240},
+  warm:  {r:180, g:100, b:30 },
+  cool:  {r:40,  g:90,  b:160},
+  sepia: {r:139, g:111, b:71 },
+};
+
+const FIELDS = ['name','brewery','origin','year','type','rice','taste'];
 
 const fieldStyles = {
   f_name:    {color:'#1a1410', size:'1.05rem'},
@@ -517,19 +528,27 @@ const fieldStyles = {
   f_taste:   {color:'#1a1410', size:'1.0rem'},
 };
 
-// ─── Apply per-field style ───
+// ── Helpers ──
+function hexToRgb(hex) {
+  const h = hex.replace('#','');
+  return { r:parseInt(h.slice(0,2),16), g:parseInt(h.slice(2,4),16), b:parseInt(h.slice(4,6),16) };
+}
+
+function getFieldVal(k) {
+  const el = document.getElementById('f_'+k);
+  return el ? el.value.trim() : '';
+}
+
+// ── Per-field style ──
 function applyStyle(id, color, size) {
   const el = document.getElementById(id);
   if (!el) return;
   if (color !== null) { fieldStyles[id].color = color; el.style.color = color; }
   if (size  !== null) { fieldStyles[id].size  = size;  el.style.fontSize = size; }
-  // Live-sync preview if it's open
-  if (document.getElementById('previewCard').classList.contains('visible')) {
-    syncPreviewText();
-  }
+  syncPreviewText();
 }
 
-// ─── Line color: preset pills ───
+// ── Line color: preset pills ──
 function setTone(pill, color) {
   document.querySelectorAll('.tone-pill').forEach(p => p.classList.remove('active'));
   pill.classList.add('active');
@@ -538,39 +557,18 @@ function setTone(pill, color) {
   traceBottle();
 }
 
-// ─── Line color: free picker ───
 function setCustomLineColor(color) {
   document.querySelectorAll('.tone-pill').forEach(p => p.classList.remove('active'));
   lineColor = color;
   traceBottle();
 }
 
-function hexToRgb(hex) {
-  const h = hex.replace('#','');
-  return {
-    r: parseInt(h.slice(0,2),16),
-    g: parseInt(h.slice(2,4),16),
-    b: parseInt(h.slice(4,6),16)
-  };
-}
-
-// ─── Filter state ───
-let filterMode = 'none';
-const FILTER_COLORS = {
-  dark:  {r:0,   g:0,   b:0  },
-  light: {r:255, g:250, b:240},
-  warm:  {r:180, g:100, b:30 },
-  cool:  {r:40,  g:90,  b:160},
-  sepia: {r:139, g:111, b:71 },
-};
-
+// ── Filter ──
 function setFilter(chip, mode) {
   document.querySelectorAll('.fchip').forEach(c => c.classList.remove('active'));
   chip.classList.add('active');
   filterMode = mode;
-  // Show/hide custom color picker
-  const picker = document.getElementById('filterColorPicker');
-  picker.style.display = mode === 'custom' ? 'block' : 'none';
+  document.getElementById('filterColorPicker').style.display = mode === 'custom' ? 'block' : 'none';
   applyFilter();
 }
 
@@ -579,27 +577,24 @@ function applyFilter() {
   if (!fc) return;
   const ctx = fc.getContext('2d');
   ctx.clearRect(0, 0, W, H);
-  if (filterMode === 'none') return;
-
+  if (filterMode === 'none') { renderPreviewCanvas(); return; }
   const opacity = parseInt(document.getElementById('filterOpacity').value) / 100;
   let r, g, b;
-
   if (filterMode === 'custom') {
-    const hex = document.getElementById('filterColorPicker').value;
-    const rgb = hexToRgb(hex);
-    r = rgb.r; g = rgb.g; b = rgb.b;
+    const rgb = hexToRgb(document.getElementById('filterColorPicker').value);
+    r=rgb.r; g=rgb.g; b=rgb.b;
   } else {
     const fc2 = FILTER_COLORS[filterMode];
-    r = fc2.r; g = fc2.g; b = fc2.b;
+    r=fc2.r; g=fc2.g; b=fc2.b;
   }
-
   ctx.globalAlpha = opacity;
   ctx.fillStyle = `rgb(${r},${g},${b})`;
   ctx.fillRect(0, 0, W, H);
   ctx.globalAlpha = 1;
+  renderPreviewCanvas();
 }
 
-// ─── Upload ───
+// ── Upload ──
 const uploadZone = document.getElementById('uploadZone');
 const fileInput  = document.getElementById('fileInput');
 uploadZone.addEventListener('click', () => fileInput.click());
@@ -632,7 +627,7 @@ function loadFile(file) {
   reader.readAsDataURL(file);
 }
 
-// ─── Draw faint photo background ───
+// ── Draw photo background ──
 function drawPhoto() {
   if (!uploadedImage || !photoCtx) return;
   const op = parseInt(document.getElementById('opacitySlider').value) / 100;
@@ -644,13 +639,19 @@ function drawPhoto() {
   photoCtx.globalAlpha = 1;
 }
 
-// ─── Bottle-only contour tracing ───
-// Technique:
-//   1. Gaussian blur the grayscale image to reduce label texture noise
-//   2. Run Sobel on the blurred image → captures major silhouette edges
-//   3. In the user-defined "label zone" (maskTop% to maskBot% from edges),
-//      additionally suppress all interior pixels (keep only near-silhouette band)
-//   4. Outside label zone: use normal threshold on unblurred image for crispness
+// ── Trace bottle outline ──
+// Algorithm:
+//   1. Render photo to offscreen canvas with white bg
+//   2. Gaussian blur to suppress label text texture
+//   3. Sobel edge detection on blurred image
+//   4. In "label zone" (maskTop% ~ maskBot%): keep only outer silhouette
+//      by scanning each row for leftmost/rightmost edge → suppress interior
+//   5. Outward offset: for each edge pixel, use the distance-transform approach
+//      — dilate the edge map by `expand` px using a circular structuring element,
+//      then subtract the original (un-expanded) filled region to get only the ring
+//      at exactly `expand` distance outward.
+//   6. Draw with line width controlled by canvas stroke (not pixel dilation).
+
 function traceBottle() {
   if (!uploadedImage || !lineCtx) return;
 
@@ -658,10 +659,11 @@ function traceBottle() {
   const maskTopPct = parseInt(document.getElementById('maskTop').value) / 100;
   const maskBotPct = parseInt(document.getElementById('maskBot').value) / 100;
   const edgeMargin = parseInt(document.getElementById('marginSlider').value);
+  const expand     = parseInt(document.getElementById('expandSlider').value);
   const lw         = parseFloat(document.getElementById('lineWidthSlider').value);
   const lc         = hexToRgb(lineColor);
 
-  // Render to off-screen canvas
+  // 1. Render photo to offscreen
   const off = document.createElement('canvas');
   off.width = W; off.height = H;
   const oc = off.getContext('2d');
@@ -669,191 +671,216 @@ function traceBottle() {
   oc.fillRect(0, 0, W, H);
   const s  = Math.min(W/uploadedImage.width, H/uploadedImage.height);
   const dw = uploadedImage.width*s, dh = uploadedImage.height*s;
-  oc.drawImage(uploadedImage, (W-dw)/2, (H-dh)/2, dw, dh);
+  const ox = Math.round((W-dw)/2), oy = Math.round((H-dh)/2);
+  oc.drawImage(uploadedImage, ox, oy, dw, dh);
 
   const rawData = oc.getImageData(0, 0, W, H).data;
 
-  // Grayscale
+  // 2. Grayscale
   const gray = new Float32Array(W * H);
   for (let i = 0; i < W*H; i++) {
     gray[i] = 0.299*rawData[i*4] + 0.587*rawData[i*4+1] + 0.114*rawData[i*4+2];
   }
 
-  // Simple 3×3 Gaussian blur (reduces label text edges)
-  const blurred = new Float32Array(W * H);
-  const gk = [1,2,1, 2,4,2, 1,2,1]; // kernel / 16
-  for (let y = 1; y < H-1; y++) {
-    for (let x = 1; x < W-1; x++) {
-      let v = 0;
-      v += gray[(y-1)*W+(x-1)]*gk[0] + gray[(y-1)*W+x]*gk[1] + gray[(y-1)*W+(x+1)]*gk[2];
-      v += gray[y*W+(x-1)]*gk[3]     + gray[y*W+x]*gk[4]     + gray[y*W+(x+1)]*gk[5];
-      v += gray[(y+1)*W+(x-1)]*gk[6] + gray[(y+1)*W+x]*gk[7] + gray[(y+1)*W+(x+1)]*gk[8];
-      blurred[y*W+x] = v / 16;
-    }
-  }
-
-  // Sobel on blurred (for silhouette) and raw (for detail outside label zone)
-  function sobel(src) {
-    const e = new Float32Array(W * H);
-    let mx = 0;
+  // 3. Multi-pass Gaussian blur (3 passes of 3×3 ≈ stronger smoothing for label suppression)
+  function gaussPass(src) {
+    const dst = new Float32Array(W * H);
     for (let y = 1; y < H-1; y++) {
       for (let x = 1; x < W-1; x++) {
-        const i = y*W+x;
-        const gx = -src[(y-1)*W+(x-1)] - 2*src[y*W+(x-1)] - src[(y+1)*W+(x-1)]
-                   +src[(y-1)*W+(x+1)] + 2*src[y*W+(x+1)] + src[(y+1)*W+(x+1)];
-        const gy = -src[(y-1)*W+(x-1)] - 2*src[(y-1)*W+x] - src[(y-1)*W+(x+1)]
-                   +src[(y+1)*W+(x-1)] + 2*src[(y+1)*W+x] + src[(y+1)*W+(x+1)];
-        e[i] = Math.sqrt(gx*gx + gy*gy);
-        if (e[i] > mx) mx = e[i];
+        dst[y*W+x] = (
+          src[(y-1)*W+(x-1)] + 2*src[(y-1)*W+x] + src[(y-1)*W+(x+1)] +
+          2*src[y*W+(x-1)]   + 4*src[y*W+x]     + 2*src[y*W+(x+1)]   +
+          src[(y+1)*W+(x-1)] + 2*src[(y+1)*W+x] + src[(y+1)*W+(x+1)]
+        ) / 16;
       }
     }
-    return {e, mx};
+    return dst;
+  }
+  let blurred = gaussPass(gray);
+  blurred = gaussPass(blurred);
+  blurred = gaussPass(blurred);
+
+  // 4. Sobel on blurred
+  const edgeMag = new Float32Array(W * H);
+  let maxE = 0;
+  for (let y = 1; y < H-1; y++) {
+    for (let x = 1; x < W-1; x++) {
+      const i = y*W+x;
+      const gx = -blurred[(y-1)*W+(x-1)] - 2*blurred[y*W+(x-1)] - blurred[(y+1)*W+(x-1)]
+                 +blurred[(y-1)*W+(x+1)] + 2*blurred[y*W+(x+1)] + blurred[(y+1)*W+(x+1)];
+      const gy = -blurred[(y-1)*W+(x-1)] - 2*blurred[(y-1)*W+x] - blurred[(y-1)*W+(x+1)]
+                 +blurred[(y+1)*W+(x-1)] + 2*blurred[(y+1)*W+x] + blurred[(y+1)*W+(x+1)];
+      edgeMag[i] = Math.sqrt(gx*gx + gy*gy);
+      if (edgeMag[i] > maxE) maxE = edgeMag[i];
+    }
   }
 
-  const {e: edgesBlur, mx: maxBlur} = sobel(blurred);
-  const {e: edgesRaw,  mx: maxRaw}  = sobel(gray);
-
+  const cut = (threshold / 100) * maxE;
   const labelTop = Math.floor(H * maskTopPct);
   const labelBot = Math.floor(H * (1 - maskBotPct));
 
-  // Build final edge binary map
+  // 5. Build edge binary map with label-zone silhouette suppression
   const edgeBin = new Uint8Array(W * H);
-  const cutBlur = (threshold / 100) * maxBlur;
-  const cutRaw  = (threshold / 100) * maxRaw;
 
   for (let y = 1; y < H-1; y++) {
-    const inLabelZone = (y >= labelTop && y <= labelBot);
-
-    // Per-row: find leftmost and rightmost any-edge pixel (blurred for robustness)
-    let leftB = W, rightB = 0;
-    if (inLabelZone) {
-      for (let x = 1; x < W-1; x++) {
-        if (edgesBlur[y*W+x] > cutBlur * 0.5) {
-          if (x < leftB)  leftB  = x;
-          if (x > rightB) rightB = x;
-        }
+    // Find leftmost/rightmost significant edge in this row (using lower threshold for boundary detection)
+    let leftSil = -1, rightSil = -1;
+    for (let x = 1; x < W-1; x++) {
+      if (edgeMag[y*W+x] > cut * 0.4) {
+        if (leftSil < 0) leftSil = x;
+        rightSil = x;
       }
     }
 
+    const inLabel = (y >= labelTop && y <= labelBot);
+
     for (let x = 1; x < W-1; x++) {
-      const i = y*W+x;
-      if (inLabelZone) {
-        // In label zone: use blurred Sobel, keep only near-silhouette band
-        if (edgesBlur[i] > cutBlur) {
-          const nearLeft  = x <= leftB  + edgeMargin;
-          const nearRight = x >= rightB - edgeMargin;
-          if (nearLeft || nearRight) edgeBin[i] = 1;
-        }
-      } else {
-        // Outside label zone: full edge detection (raw)
-        if (edgesRaw[i] > cutRaw) edgeBin[i] = 1;
+      if (edgeMag[y*W+x] <= cut) continue;
+      if (inLabel && leftSil >= 0) {
+        // In label zone: only keep pixels within edgeMargin of the silhouette boundary
+        const nearLeft  = (x <= leftSil  + edgeMargin);
+        const nearRight = (x >= rightSil - edgeMargin);
+        if (!nearLeft && !nearRight) continue;
       }
+      edgeBin[y*W+x] = 1;
     }
   }
 
-  // ── Outward expansion: silhouette-boundary method ──
-  // Robust for any bottle color (light or dark).
-  // Strategy:
-  //   Per row: find the leftmost and rightmost edge pixels → those are the silhouette boundary.
-  //   Shift them outward by `expand` px horizontally.
-  //   Per column: find topmost and bottommost edge pixels → shift vertically.
-  //   This gives a clean floating outline that never inverts on light bottles.
-  const expand = parseInt(document.getElementById('expandSlider').value);
-  const finalBin = new Uint8Array(W * H);
+  // 6. Outward expansion using circular dilation
+  // For each silhouette boundary point (leftmost/rightmost per row, top/bottom per col),
+  // draw a circle of radius `expand` on the finalBin — this naturally follows the bottle shape.
+  // Then only keep pixels that are NOT inside the original bottle silhouette (filled region).
+  lineCtx.clearRect(0, 0, W, H);
 
   if (expand <= 0) {
-    for (let i = 0; i < W*H; i++) finalBin[i] = edgeBin[i];
+    // Draw edgeBin directly with stroke width
+    drawEdgesWithStroke(edgeBin, lc, lw);
   } else {
-    // Horizontal pass: left/right silhouette per row
+    // Collect silhouette boundary points: per row left/right, per col top/bottom
+    const boundaryPts = [];
+
     for (let y = 0; y < H; y++) {
       let leftX = -1, rightX = -1;
       for (let x = 0; x < W; x++) {
-        if (edgeBin[y*W+x]) { if (leftX < 0) leftX = x; rightX = x; }
+        if (edgeBin[y*W+x]) { if (leftX<0) leftX=x; rightX=x; }
       }
-      if (leftX < 0) continue;
-      // Shift left edge to the left (outward)
-      const newLeft  = Math.max(0, leftX  - expand);
-      const newRight = Math.min(W-1, rightX + expand);
-      // Draw a short horizontal stroke at each boundary
-      const hw = Math.max(1, Math.round(expand * 0.4)); // stroke half-width
-      for (let dx2 = -hw; dx2 <= hw; dx2++) {
-        const lx = newLeft  + dx2; if (lx >= 0 && lx < W) finalBin[y*W+lx] = 1;
-        const rx = newRight + dx2; if (rx >= 0 && rx < W) finalBin[y*W+rx] = 1;
+      if (leftX >= 0) {
+        boundaryPts.push([leftX, y]);
+        if (rightX !== leftX) boundaryPts.push([rightX, y]);
       }
     }
-    // Vertical pass: top/bottom silhouette per column
     for (let x = 0; x < W; x++) {
       let topY = -1, botY = -1;
       for (let y = 0; y < H; y++) {
-        if (edgeBin[y*W+x]) { if (topY < 0) topY = y; botY = y; }
+        if (edgeBin[y*W+x]) { if (topY<0) topY=y; botY=y; }
       }
-      if (topY < 0) continue;
-      const newTop = Math.max(0, topY  - expand);
-      const newBot = Math.min(H-1, botY + expand);
-      const hh = Math.max(1, Math.round(expand * 0.4));
-      for (let dy2 = -hh; dy2 <= hh; dy2++) {
-        const ty2 = newTop + dy2; if (ty2 >= 0 && ty2 < H) finalBin[ty2*W+x] = 1;
-        const by2 = newBot + dy2; if (by2 >= 0 && by2 < H) finalBin[by2*W+x] = 1;
+      if (topY >= 0) {
+        boundaryPts.push([x, topY]);
+        if (botY !== topY) boundaryPts.push([x, botY]);
       }
     }
-  }
 
-  // Render to canvas
-  lineCtx.clearRect(0, 0, W, H);
-  const out = lineCtx.createImageData(W, H);
-  const od  = out.data;
-
-  for (let i = 0; i < W*H; i++) {
-    if (finalBin[i]) {
-      const noise = (Math.random()-0.5)*18;
-      od[i*4]   = Math.max(0, Math.min(255, lc.r + Math.round((Math.random()-0.5)*10)));
-      od[i*4+1] = Math.max(0, Math.min(255, lc.g + Math.round((Math.random()-0.5)*8)));
-      od[i*4+2] = Math.max(0, Math.min(255, lc.b + Math.round((Math.random()-0.5)*8)));
-      od[i*4+3] = Math.min(255, 205 + noise);
-    } else {
-      od[i*4+3] = 0;
-    }
-  }
-  lineCtx.putImageData(out, 0, 0);
-
-  // Thicken lines if lw > 1 using blur + composite
-  if (lw > 1.2) {
+    // Draw expanded outline using canvas arc — smooth and continuous
+    lineCtx.save();
+    // Use destination-out trick: draw filled bottle silhouette first, then draw expanded ring
+    // Simpler: just stroke all boundary points as arcs on a temp canvas, then draw
     const tmp = document.createElement('canvas');
     tmp.width = W; tmp.height = H;
     const tc = tmp.getContext('2d');
-    tc.drawImage(document.getElementById('lineCanvas'), 0, 0);
-    lineCtx.clearRect(0, 0, W, H);
-    lineCtx.filter = `blur(${(lw-1)*0.55}px)`;
-    lineCtx.drawImage(tmp, 0, 0);
-    lineCtx.filter = 'none';
-    lineCtx.globalAlpha = 0.72;
+
+    // Paint expanded outline: for each boundary point, draw a small circle of radius expand
+    // on the tmp canvas. This creates a "grown" shape.
+    tc.fillStyle = `rgb(${lc.r},${lc.g},${lc.b})`;
+    const r2 = expand + Math.max(0, lw - 1);
+    const dedupe = new Set();
+    for (const [px, py] of boundaryPts) {
+      const key = `${px},${py}`;
+      if (dedupe.has(key)) continue;
+      dedupe.add(key);
+      tc.beginPath();
+      tc.arc(px, py, r2, 0, Math.PI*2);
+      tc.fill();
+    }
+
+    // Now erase the inner region (inside original silhouette) using destination-out
+    // Build filled silhouette: flood-fill from center row using edgeBin as boundary
+    // Simple: per row, fill between leftmost and rightmost edge pixel
+    tc.globalCompositeOperation = 'destination-out';
+    tc.fillStyle = 'rgba(0,0,0,1)';
+    for (let y = 0; y < H; y++) {
+      let leftX = -1, rightX = -1;
+      for (let x = 0; x < W; x++) {
+        if (edgeBin[y*W+x]) { if (leftX<0) leftX=x; rightX=x; }
+      }
+      if (leftX >= 0 && rightX > leftX) {
+        // Erase interior — shrink by expand so we keep the outer ring
+        const innerL = leftX  + expand;
+        const innerR = rightX - expand;
+        if (innerR > innerL) {
+          tc.fillRect(innerL, y, innerR-innerL, 1);
+        }
+      }
+    }
+    tc.globalCompositeOperation = 'source-over';
+
+    // Apply noise/hand-drawn effect: slightly jitter the opacity
+    lineCtx.globalAlpha = 0.92;
     lineCtx.drawImage(tmp, 0, 0);
     lineCtx.globalAlpha = 1;
+    lineCtx.restore();
   }
 
-  // Subtle brush texture
+  // Subtle brush texture strokes
   lineCtx.save();
-  lineCtx.globalAlpha = 0.02;
-  for (let i = 0; i < 75; i++) {
+  lineCtx.globalAlpha = 0.018;
+  for (let i = 0; i < 60; i++) {
     const x = Math.random()*W, y = Math.random()*H;
-    const l = Math.random()*11+2;
+    const l = Math.random()*10+2;
     lineCtx.beginPath();
     lineCtx.moveTo(x, y);
     lineCtx.lineTo(x + l*(Math.random()-.5), y + l*(Math.random()-.5));
     lineCtx.strokeStyle = `rgb(${lc.r},${lc.g},${lc.b})`;
-    lineCtx.lineWidth = Math.random()*1.8;
+    lineCtx.lineWidth = Math.random()*1.5;
     lineCtx.stroke();
   }
   lineCtx.restore();
-  // If preview card is open, refresh its canvas too
+
+  // Refresh preview canvas if open
   if (document.getElementById('previewCard').classList.contains('visible')) {
     renderPreviewCanvas();
   }
 }
 
+// Draw edge pixels using canvas stroke (respects lineWidth properly)
+function drawEdgesWithStroke(edgeBin, lc, lw) {
+  lineCtx.save();
+  lineCtx.strokeStyle = `rgb(${lc.r},${lc.g},${lc.b})`;
+  lineCtx.lineWidth = lw;
+  lineCtx.lineCap = 'round';
+  lineCtx.lineJoin = 'round';
+  lineCtx.globalAlpha = 0.88;
+
+  // Group edge pixels into horizontal runs and draw as lines
+  for (let y = 0; y < H; y++) {
+    let runStart = -1;
+    for (let x = 0; x <= W; x++) {
+      const isEdge = (x < W) && edgeBin[y*W+x];
+      if (isEdge && runStart < 0) { runStart = x; }
+      else if (!isEdge && runStart >= 0) {
+        lineCtx.beginPath();
+        lineCtx.moveTo(runStart, y);
+        lineCtx.lineTo(x-1, y);
+        lineCtx.stroke();
+        runStart = -1;
+      }
+    }
+  }
+  lineCtx.restore();
+}
+
 function clearLine() { if (lineCtx) lineCtx.clearRect(0, 0, W, H); }
 
-// ─── Slider listeners ───
+// ── Slider listeners ──
 ['traceSlider','opacitySlider','maskTop','maskBot','marginSlider','expandSlider','lineWidthSlider','filterOpacity'].forEach(id => {
   const valId = {
     traceSlider:'traceVal', opacitySlider:'opacityVal',
@@ -869,53 +896,55 @@ function clearLine() { if (lineCtx) lineCtx.clearRect(0, 0, W, H); }
   });
 });
 
-// ─── Live title ───
+// ── Live title ──
 function liveTitle() {
-  const v = document.getElementById('f_name').value.trim();
+  const v = getFieldVal('name');
   document.getElementById('noteTitle').textContent = v || '清酒名稱';
-  if (document.getElementById('previewCard').classList.contains('visible')) {
-    syncPreviewText();
-  }
+  syncPreviewText();
 }
 
-// ─── Preview: sync text + style to preview card ───
+// ── Sync preview text ──
+// Maps: f_name→prev_name (big heading), others→prev_{k}
 function syncPreviewText() {
-  const keys = ['name','brewery','origin','year','type','rice','taste'];
-  keys.forEach(k => {
-    const el  = document.getElementById('prev_'+k);
+  // Big heading = f_name
+  const nameVal = getFieldVal('name');
+  const nameEl  = document.getElementById('prev_name');
+  if (nameEl) {
+    nameEl.textContent  = nameVal || '—';
+    nameEl.style.color  = fieldStyles['f_name'].color;
+  }
+
+  // Other fields
+  const others = ['brewery','origin','year','type','rice','taste'];
+  others.forEach(k => {
+    const el = document.getElementById('prev_'+k);
     if (!el) return;
-    const src = document.getElementById('f_'+k);
-    const val = src ? src.value.trim() : '';
-    el.textContent = val || '—';
+    const val = getFieldVal(k);
+    el.textContent  = val || '—';
     el.style.color    = fieldStyles['f_'+k] ? fieldStyles['f_'+k].color : '#1a1410';
     el.style.fontSize = fieldStyles['f_'+k] ? fieldStyles['f_'+k].size  : '1.05rem';
-    // Also sync prev_name heading
-    if (k === 'name') {
-      const nameEl = document.getElementById('prev_name');
-      if (nameEl) {
-        nameEl.textContent = val || '—';
-        nameEl.style.color = fieldStyles['f_name'].color;
-      }
-    }
   });
 }
 
+// ── Render preview canvas ──
 function renderPreviewCanvas() {
   const pvc = document.getElementById('previewCanvas');
-  if (!pvc) return;
+  if (!pvc || !uploadedImage) return;
   const pc = pvc.getContext('2d');
   pc.clearRect(0, 0, 170, 420);
-  if (uploadedImage) {
-    const s  = Math.min(170/uploadedImage.width, 420/uploadedImage.height);
-    const dw = uploadedImage.width*s, dh = uploadedImage.height*s;
-    pc.globalAlpha = 0.15;
-    pc.drawImage(uploadedImage, (170-dw)/2, (420-dh)/2, dw, dh);
-    pc.globalAlpha = 1;
-  }
+  // Draw photo
+  const s  = Math.min(170/uploadedImage.width, 420/uploadedImage.height);
+  const dw = uploadedImage.width*s, dh = uploadedImage.height*s;
+  pc.globalAlpha = 0.22;
+  pc.drawImage(uploadedImage, (170-dw)/2, (420-dh)/2, dw, dh);
+  pc.globalAlpha = 1;
+  // Draw filter
   pc.drawImage(document.getElementById('filterCanvas'), 0, 0, 170, 420);
+  // Draw line art
   pc.drawImage(document.getElementById('lineCanvas'),   0, 0, 170, 420);
 }
 
+// ── Show preview ──
 function showPreview() {
   syncPreviewText();
   renderPreviewCanvas();
@@ -924,7 +953,7 @@ function showPreview() {
   document.getElementById('previewCard').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-// ─── Export helpers ───
+// ── Export helpers ──
 function showSpinner(msg) {
   document.getElementById('spinnerMsg').textContent = msg || '匯出中…';
   document.getElementById('spinnerOverlay').classList.add('visible');
@@ -944,7 +973,7 @@ async function doExport(fmt) {
   const scale  = parseInt(document.getElementById('sizeSelect').value);
   const target = document.getElementById('previewInner');
   const sl     = document.querySelector('.preview-card .section-label');
-  const prev   = sl ? sl.style.display : '';
+  const prevD  = sl ? sl.style.display : '';
   if (sl) sl.style.display = 'none';
   try {
     await document.fonts.ready;
@@ -953,14 +982,14 @@ async function doExport(fmt) {
     });
     const mime = fmt==='jpg' ? 'image/jpeg' : 'image/png';
     const url  = canvas.toDataURL(mime, fmt==='jpg' ? 0.92 : 1.0);
-    const name = (document.getElementById('f_name').value.trim().replace(/\s+/g,'-') || 'sake-note');
+    const name = (getFieldVal('name').replace(/\s+/g,'-') || 'sake-note');
     const a = document.createElement('a');
     a.href = url; a.download = `${name}.${fmt}`; a.click();
     showToast(`✦ 已匯出 ${fmt.toUpperCase()}，品飲愉快！`);
   } catch(e) {
     showToast('匯出失敗，請再試一次'); console.error(e);
   } finally {
-    if (sl) sl.style.display = prev;
+    if (sl) sl.style.display = prevD;
     hideSpinner();
   }
 }
@@ -968,16 +997,16 @@ async function doExport(fmt) {
 async function exportBottleOnly() {
   showSpinner('正在匯出線稿…');
   try {
-    const lc = document.getElementById('lineCanvas');
-    const oc = document.createElement('canvas');
-    oc.width = lc.width; oc.height = lc.height;
-    const ctx = oc.getContext('2d');
+    const lc2 = document.getElementById('lineCanvas');
+    const oc2 = document.createElement('canvas');
+    oc2.width = lc2.width; oc2.height = lc2.height;
+    const ctx = oc2.getContext('2d');
     ctx.fillStyle = '#f7f3ec';
-    ctx.fillRect(0, 0, oc.width, oc.height);
-    ctx.drawImage(lc, 0, 0);
-    const name = (document.getElementById('f_name').value.trim().replace(/\s+/g,'-') || 'sake-bottle');
+    ctx.fillRect(0, 0, oc2.width, oc2.height);
+    ctx.drawImage(lc2, 0, 0);
+    const name = (getFieldVal('name').replace(/\s+/g,'-') || 'sake-bottle');
     const a = document.createElement('a');
-    a.href = oc.toDataURL('image/png'); a.download = `${name}-lineart.png`; a.click();
+    a.href = oc2.toDataURL('image/png'); a.download = `${name}-lineart.png`; a.click();
     showToast('✦ 線稿已匯出！');
   } catch(e) { showToast('匯出失敗'); }
   finally { hideSpinner(); }
@@ -990,8 +1019,9 @@ function resetAll() {
   document.getElementById('exportBar').classList.remove('visible');
   uploadZone.style.display = '';
   fileInput.value = '';
-  ['f_name','f_brewery','f_origin','f_year','f_type','f_rice','f_taste'].forEach(id => {
-    document.getElementById(id).value = '';
+  FIELDS.forEach(k => {
+    const el = document.getElementById('f_'+k);
+    if (el) el.value = '';
   });
   document.getElementById('noteTitle').textContent = '清酒名稱';
   if (photoCtx)  photoCtx.clearRect(0, 0, W, H);
@@ -999,6 +1029,7 @@ function resetAll() {
   if (lineCtx)   lineCtx.clearRect(0, 0, W, H);
   filterMode = 'none';
   document.querySelectorAll('.fchip').forEach((c,i) => c.classList.toggle('active', i===0));
+  syncPreviewText();
 }
 </script>
 </body>
