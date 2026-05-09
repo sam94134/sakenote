@@ -7,15 +7,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Noto+Serif+JP:wght@300;400;700&family=Ma+Shan+Zheng&display=swap');
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>清酒手帖 · Sake Handdrawn Note</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Noto+Serif+JP:wght@300;400;700&family=Ma+Shan+Zheng&display=swap');
 
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -153,52 +144,11 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
 .note-field textarea{min-height:50px}
 
 /* Preview card */
-.preview-card{display:none;background:var(--paper-aged);border:1px solid rgba(26,20,16,.14);border-radius:4px;padding:2.2rem;position:relative;overflow:hidden;margin-bottom:1.4rem}
+.preview-card{display:none;background:var(--paper-aged);border:1px solid rgba(26,20,16,.14);border-radius:4px;padding:2rem;position:relative;overflow:hidden;margin-bottom:1.4rem}
 .preview-card.visible{display:block}
 .wm{position:absolute;font-family:'Kaisei Decol',serif;font-size:8rem;color:rgba(26,20,16,.02);top:50%;left:50%;transform:translate(-50%,-50%) rotate(-20deg);pointer-events:none;white-space:nowrap;letter-spacing:.1em}
-/* Preview card layout: left-col | bottle | right-col */
-.preview-inner{
-  display:grid;
-  grid-template-columns:1fr auto 1fr;
-  grid-template-rows:auto 1fr;
-  gap:0 1.6rem;
-  position:relative;
-  align-items:start;
-}
-.prev-name{
-  grid-column:1/-1;
-  font-family:'Kaisei Decol',serif;font-size:1.75rem;font-weight:700;
-  letter-spacing:.15em;margin-bottom:1.2rem;line-height:1.2;
-  text-align:center;
-  border-bottom:1px solid rgba(26,20,16,.12);
-  padding-bottom:.7rem;
-}
-.preview-bottle{
-  grid-column:2;
-  grid-row:2;
-  width:150px;height:380px;
-  display:flex;align-items:center;justify-content:center;
-}
-#previewCanvas{width:150px;height:380px}
-.prev-left{
-  grid-column:1;
-  grid-row:2;
-  display:flex;flex-direction:column;gap:.9rem;
-  padding-top:.3rem;
-}
-.prev-right{
-  grid-column:3;
-  grid-row:2;
-  display:flex;flex-direction:column;gap:.9rem;
-  padding-top:.3rem;
-}
-.pf{border-bottom:1px solid rgba(26,20,16,.1);padding-bottom:.55rem}
-.pf-label{font-size:.55rem;letter-spacing:.2em;color:var(--sepia);text-transform:uppercase;margin-bottom:.12rem}
-.pf-value{font-family:'Ma Shan Zheng',cursive;font-size:1.12rem;line-height:1.4}
-.pf.taste-pf{border-bottom:none}
-/* divider lines between cols and bottle */
-.prev-left{border-right:1px solid rgba(26,20,16,.1);padding-right:1.2rem}
-.prev-right{border-left:1px solid rgba(26,20,16,.1);padding-left:1.2rem}
+.preview-inner{display:flex;justify-content:center;position:relative}
+#previewCanvas{display:block;width:100%;max-width:480px;height:auto;border-radius:3px;aspect-ratio:4/5}
 .brush-deco{position:absolute;bottom:-12px;right:-12px;opacity:.05;pointer-events:none}
 
 /* Export bar */
@@ -228,11 +178,11 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
   .bottle-panel{flex:none}
   .note-grid{grid-template-columns:1fr}
   .preview-inner{grid-template-columns:1fr;grid-template-rows:auto auto auto auto}
-  .prev-name{grid-column:1}
+  
   .preview-bottle{grid-column:1;grid-row:3;width:100%;height:220px;margin:0 auto}
   #previewCanvas{width:100%;height:220px}
-  .prev-left{grid-column:1;grid-row:2;border-right:none;border-bottom:1px solid rgba(26,20,16,.1);padding-right:0;padding-bottom:.8rem}
-  .prev-right{grid-column:1;grid-row:4;border-left:none;padding-left:0;padding-top:.8rem}
+  
+  
 }
 </style>
 </head>
@@ -498,29 +448,12 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
     </div><!-- /notes-panel -->
   </div><!-- /main-section -->
 
-  <!-- Preview card -->
+  <!-- Preview card: single all-in-one canvas -->
   <div class="preview-card" id="previewCard">
     <div class="wm">清酒</div>
     <div class="section-label">介紹卡預覽</div>
     <div class="preview-inner" id="previewInner">
-      <!-- Row 1: sake name spanning full width -->
-      <div class="prev-name" id="prev_name">—</div>
-      <!-- Row 2 left: origin, year, taste -->
-      <div class="prev-left">
-        <div class="pf"><div class="pf-label">產地 / 産地</div><div class="pf-value" id="prev_origin">—</div></div>
-        <div class="pf"><div class="pf-label">年份</div><div class="pf-value" id="prev_year">—</div></div>
-        <div class="pf taste-pf"><div class="pf-label">口感品評</div><div class="pf-value" id="prev_taste">—</div></div>
-      </div>
-      <!-- Row 2 center: bottle canvas -->
-      <div class="preview-bottle">
-        <canvas id="previewCanvas" width="150" height="380"></canvas>
-      </div>
-      <!-- Row 2 right: brewery, type, rice -->
-      <div class="prev-right">
-        <div class="pf"><div class="pf-label">酒造 / 蔵元</div><div class="pf-value" id="prev_brewery">—</div></div>
-        <div class="pf"><div class="pf-label">釀造類別</div><div class="pf-value" id="prev_type">—</div></div>
-        <div class="pf"><div class="pf-label">精米步合</div><div class="pf-value" id="prev_rice">—</div></div>
-      </div>
+      <canvas id="previewCanvas"></canvas>
     </div>
     <svg class="brush-deco" width="200" height="200" viewBox="0 0 200 200" fill="none">
       <path d="M20,180 Q60,100 100,80 Q140,60 170,20" stroke="#1a1410" stroke-width="8" stroke-linecap="round" fill="none"/>
@@ -528,14 +461,11 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
     </svg>
   </div>
 
-  <!-- Export bar -->
+    <!-- Export bar -->
   <div class="export-bar" id="exportBar">
     <span>✦ 匯出介紹卡</span>
-    <select class="size-select" id="sizeSelect">
-      <option value="1">標準 1×</option>
-      <option value="2" selected>高清 2×</option>
-      <option value="3">超清 3×</option>
-    </select>
+    <select class="size-select" id="sizeSelect" style="display:none"></select>
+    <span style="font-size:.76rem;color:var(--sepia);letter-spacing:.06em">1536 × 1920 px　4:5</span>
     <button class="btn green" onclick="exportPNG()">⬇ PNG</button>
     <button class="btn blue"  onclick="exportJPG()">⬇ JPG</button>
     <button class="btn outline" onclick="exportBottleOnly()">🍶 僅線稿 PNG</button>
@@ -896,1025 +826,232 @@ function liveTitle() {
   syncPreviewText();
 }
 
-// ── Sync preview text ──
-// Maps: f_name→prev_name (big heading), others→prev_{k}
+// ── syncPreviewText: just re-render the all-in-one canvas ──
 function syncPreviewText() {
-  // Big heading = f_name
-  const nameVal = getFieldVal('name');
-  const nameEl  = document.getElementById('prev_name');
-  if (nameEl) {
-    nameEl.textContent  = nameVal || '—';
-    nameEl.style.color  = fieldStyles['f_name'].color;
-  }
-
-  // Other fields
-  const others = ['brewery','origin','year','type','rice','taste'];
-  others.forEach(k => {
-    const el = document.getElementById('prev_'+k);
-    if (!el) return;
-    const val = getFieldVal(k);
-    el.textContent  = val || '—';
-    el.style.color    = fieldStyles['f_'+k] ? fieldStyles['f_'+k].color : '#1a1410';
-    el.style.fontSize = fieldStyles['f_'+k] ? fieldStyles['f_'+k].size  : '1.05rem';
-  });
-}
-
-// ── Render preview canvas ──
-function renderPreviewCanvas() {
-  const pvc = document.getElementById('previewCanvas');
-  if (!pvc || !uploadedImage) return;
-  const PW = 150, PH = 380;
-  pvc.width = PW; pvc.height = PH;
-  const pc = pvc.getContext('2d');
-  pc.clearRect(0, 0, PW, PH);
-  // Draw photo
-  const s  = Math.min(PW/uploadedImage.width, PH/uploadedImage.height);
-  const dw = uploadedImage.width*s, dh = uploadedImage.height*s;
-  pc.globalAlpha = 0.22;
-  pc.drawImage(uploadedImage, (PW-dw)/2, (PH-dh)/2, dw, dh);
-  pc.globalAlpha = 1;
-  // Draw filter overlay
-  pc.drawImage(document.getElementById('filterCanvas'), 0, 0, PW, PH);
-  // Draw line art
-  pc.drawImage(document.getElementById('lineCanvas'), 0, 0, PW, PH);
-}
-
-// ── Show preview ──
-function showPreview() {
-  syncPreviewText();
-  renderPreviewCanvas();
-  document.getElementById('previewCard').classList.add('visible');
-  document.getElementById('exportBar').classList.add('visible');
-  document.getElementById('previewCard').scrollIntoView({behavior:'smooth', block:'start'});
-}
-
-// ── Export helpers ──
-function showSpinner(msg) {
-  document.getElementById('spinnerMsg').textContent = msg || '匯出中…';
-  document.getElementById('spinnerOverlay').classList.add('visible');
-}
-function hideSpinner() { document.getElementById('spinnerOverlay').classList.remove('visible'); }
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-async function exportPNG() { await doExport('png'); }
-async function exportJPG() { await doExport('jpg'); }
-
-async function doExport(fmt) {
-  showSpinner(fmt === 'png' ? '正在生成 PNG…' : '正在生成 JPG…');
-  const scale  = parseInt(document.getElementById('sizeSelect').value);
-  const target = document.getElementById('previewInner');
-  const sl     = document.querySelector('.preview-card .section-label');
-  const prevD  = sl ? sl.style.display : '';
-  if (sl) sl.style.display = 'none';
-  try {
-    await document.fonts.ready;
-    const canvas = await html2canvas(target, {
-      scale, useCORS:true, backgroundColor:'#ede8dc', logging:false
-    });
-    const mime = fmt==='jpg' ? 'image/jpeg' : 'image/png';
-    const url  = canvas.toDataURL(mime, fmt==='jpg' ? 0.92 : 1.0);
-    const name = (getFieldVal('name').replace(/\s+/g,'-') || 'sake-note');
-    const a = document.createElement('a');
-    a.href = url; a.download = `${name}.${fmt}`; a.click();
-    showToast(`✦ 已匯出 ${fmt.toUpperCase()}，品飲愉快！`);
-  } catch(e) {
-    showToast('匯出失敗，請再試一次'); console.error(e);
-  } finally {
-    if (sl) sl.style.display = prevD;
-    hideSpinner();
-  }
-}
-
-async function exportBottleOnly() {
-  showSpinner('正在匯出線稿…');
-  try {
-    const lc2 = document.getElementById('lineCanvas');
-    const oc2 = document.createElement('canvas');
-    oc2.width = lc2.width; oc2.height = lc2.height;
-    const ctx = oc2.getContext('2d');
-    ctx.fillStyle = '#f7f3ec';
-    ctx.fillRect(0, 0, oc2.width, oc2.height);
-    ctx.drawImage(lc2, 0, 0);
-    const name = (getFieldVal('name').replace(/\s+/g,'-') || 'sake-bottle');
-    const a = document.createElement('a');
-    a.href = oc2.toDataURL('image/png'); a.download = `${name}-lineart.png`; a.click();
-    showToast('✦ 線稿已匯出！');
-  } catch(e) { showToast('匯出失敗'); }
-  finally { hideSpinner(); }
-}
-
-function resetAll() {
-  uploadedImage = null;
-  document.getElementById('mainSection').classList.remove('visible');
-  document.getElementById('previewCard').classList.remove('visible');
-  document.getElementById('exportBar').classList.remove('visible');
-  uploadZone.style.display = '';
-  fileInput.value = '';
-  FIELDS.forEach(k => {
-    const el = document.getElementById('f_'+k);
-    if (el) el.value = '';
-  });
-  document.getElementById('noteTitle').textContent = '清酒名稱';
-  if (photoCtx)  photoCtx.clearRect(0, 0, W, H);
-  if (filterCtx) filterCtx.clearRect(0, 0, W, H);
-  if (lineCtx)   lineCtx.clearRect(0, 0, W, H);
-  filterMode = 'none';
-  document.querySelectorAll('.fchip').forEach((c,i) => c.classList.toggle('active', i===0));
-  syncPreviewText();
-}
-</script>
-</body>
-</html>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --ink:#1a1410;--paper:#f7f3ec;--paper-aged:#ede8dc;
-  --sepia:#8b6f47;--accent:#8b2020;
-}
-body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;color:var(--ink)}
-.app-wrapper{max-width:1020px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
-
-/* Header */
-.header{text-align:center;margin-bottom:2.8rem}
-.header h1{font-family:'Kaisei Decol',serif;font-size:2.5rem;font-weight:700;letter-spacing:0.28em}
-.header h1 span{display:block;width:50%;margin:.45rem auto 0;height:1.5px;background:var(--ink);opacity:.18}
-.header p{font-size:.76rem;letter-spacing:.22em;color:var(--sepia);margin-top:.5rem}
-
-/* Upload */
-.upload-zone{border:1.5px dashed var(--sepia);border-radius:4px;padding:3rem 2rem;text-align:center;cursor:pointer;transition:background .2s;margin-bottom:2rem;background:rgba(139,111,71,.03)}
-.upload-zone:hover{background:rgba(139,111,71,.08)}
-.upload-zone.dragging{background:rgba(139,111,71,.13);border-style:solid}
-.upload-zone input{display:none}
-.upload-icon{font-size:2.4rem;display:block;margin-bottom:.8rem}
-.upload-zone p{color:var(--sepia);font-size:.9rem;letter-spacing:.08em}
-.upload-zone small{font-size:.73rem;color:#b09a7e;margin-top:.3rem;display:block}
-
-/* Main layout */
-.main-section{display:none;gap:2rem;margin-bottom:2rem}
-.main-section.visible{display:flex}
-
-/* Bottle panel */
-.bottle-panel{flex:0 0 270px;background:var(--paper-aged);border:1px solid rgba(26,20,16,.12);border-radius:3px;overflow:hidden}
-.bottle-canvas-wrap{position:relative;width:270px;height:510px}
-#photoCanvas{position:absolute;top:0;left:0;width:270px;height:510px}
-#filterCanvas{position:absolute;top:0;left:0;width:270px;height:510px;pointer-events:none}
-#lineCanvas {position:absolute;top:0;left:0;width:270px;height:510px}
-
-/* Filter row */
-.filter-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;flex-wrap:wrap}
-.filter-row label{font-size:.73rem;color:var(--sepia);letter-spacing:.05em}
-.filter-chips{display:flex;gap:.3rem;flex-wrap:wrap}
-.fchip{
-  font-size:.68rem;padding:.22rem .55rem;border-radius:20px;cursor:pointer;
-  border:1px solid rgba(26,20,16,.2);color:var(--sepia);
-  font-family:'Noto Serif JP',serif;letter-spacing:.05em;
-  transition:all .15s;user-select:none;
-}
-.fchip:hover{border-color:var(--ink);color:var(--ink)}
-.fchip.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.fchip.fc-dark{border-color:#444}
-.fchip.fc-light{border-color:#c8b89a}
-.fchip.fc-warm{border-color:#b87340}
-.fchip.fc-cool{border-color:#3a6a9a}
-.fchip.fc-sepia{border-color:#8b6f47}
-.fchip.fc-custom{border-color:#7a4a8a}
-
-/* Notes panel */
-.notes-panel{flex:1;display:flex;flex-direction:column;gap:0}
-.section-label{font-size:.67rem;letter-spacing:.24em;color:var(--sepia);text-transform:uppercase;margin-bottom:.8rem;display:flex;align-items:center;gap:.8rem}
-.section-label::after{content:'';flex:1;height:1px;background:rgba(26,20,16,.11)}
-
-/* Controls */
-.ctrl-row{display:flex;align-items:center;gap:.65rem;margin-bottom:.75rem;flex-wrap:wrap}
-.ctrl-row label{font-size:.73rem;color:var(--sepia);letter-spacing:.05em}
-.ctrl-row input[type=range]{width:90px;accent-color:var(--ink)}
-.ctrl-row span{font-size:.73rem;color:var(--ink);min-width:24px}
-
-/* Tone pills */
-.tone-row{display:flex;gap:.42rem;margin-bottom:.9rem;flex-wrap:wrap;align-items:center}
-.tone-row label{font-size:.71rem;color:var(--sepia);letter-spacing:.06em;margin-right:.2rem}
-.tone-pill{width:21px;height:21px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:transform .15s,box-shadow .15s;flex-shrink:0}
-.tone-pill:hover{transform:scale(1.2)}
-.tone-pill.active{border-color:var(--ink);box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--ink)}
-
-/* Buttons */
-.btn-row{display:flex;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap}
-.btn{background:var(--ink);color:var(--paper);border:none;padding:.48rem 1rem;font-family:'Noto Serif JP',serif;font-size:.76rem;letter-spacing:.1em;cursor:pointer;border-radius:2px;transition:opacity .2s}
-.btn:hover{opacity:.72}
-.btn.outline{background:transparent;color:var(--ink);border:1px solid rgba(26,20,16,.35)}
-.btn.accent{background:var(--accent)}
-.btn.green{background:#3a6b2a}
-.btn.blue{background:#1e4a72}
-
-/* Notes paper */
-.notes-paper{
-  background:repeating-linear-gradient(transparent,transparent 37px,rgba(26,20,16,.07) 37px,rgba(26,20,16,.07) 38px),var(--paper);
-  border:1px solid rgba(26,20,16,.12);border-radius:3px;
-  padding:1.4rem 1.4rem 1.4rem 2.9rem;flex:1;position:relative;
-}
-.notes-paper::before{content:'';position:absolute;left:2.1rem;top:0;bottom:0;width:1px;background:rgba(139,32,32,.22)}
-
-.sake-stamp{
-  width:56px;height:56px;border:2.5px solid var(--accent);border-radius:50%;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  position:absolute;top:1rem;right:1rem;color:var(--accent);
-  font-family:'Kaisei Decol',serif;font-size:.46rem;letter-spacing:.1em;
-  text-align:center;opacity:.47;line-height:1.4;transform:rotate(-12deg);
-}
-.sake-stamp .sm{font-size:.85rem;font-weight:700}
-
-.note-title{font-family:'Kaisei Decol',serif;font-size:1.4rem;letter-spacing:.14em;margin-bottom:1.25rem;padding-bottom:.42rem;border-bottom:1px solid rgba(26,20,16,.14);font-weight:700}
-.note-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem 1.25rem}
-
-/* Field */
-.note-field{position:relative}
-.field-head{display:flex;align-items:center;gap:.38rem;margin-bottom:.18rem;flex-wrap:wrap}
-.field-head > label{font-size:.61rem;letter-spacing:.17em;color:var(--sepia);text-transform:uppercase;flex:1;min-width:60px}
-.field-head .ja{font-size:.66rem;color:rgba(139,111,71,.6)}
-
-/* Style controls inline */
-.fstyle{display:flex;align-items:center;gap:.3rem}
-.fstyle input[type=color]{
-  width:17px;height:17px;border:1px solid rgba(26,20,16,.22);border-radius:50%;
-  padding:0;cursor:pointer;background:none;outline:none;
-  -webkit-appearance:none;overflow:hidden;flex-shrink:0;
-}
-.fstyle input[type=color]::-webkit-color-swatch-wrapper{padding:0}
-.fstyle input[type=color]::-webkit-color-swatch{border:none;border-radius:50%}
-.fstyle select{
-  font-size:.63rem;color:var(--ink);background:var(--paper);
-  border:1px solid rgba(26,20,16,.18);border-radius:2px;
-  outline:none;cursor:pointer;padding:1px 3px;
-  font-family:'Noto Serif JP',serif;
-}
-
-.note-field input,.note-field textarea{
-  width:100%;background:transparent;border:none;
-  border-bottom:1px solid rgba(26,20,16,.17);padding:.2rem 0;
-  font-family:'Ma Shan Zheng',cursive;outline:none;
-  transition:border-color .2s;resize:none;line-height:1.65;
-}
-.note-field input::placeholder,.note-field textarea::placeholder{
-  color:rgba(26,20,16,.17);font-size:.78rem;font-family:'Noto Serif JP',serif;
-}
-.note-field input:focus,.note-field textarea:focus{border-bottom-color:var(--accent)}
-.note-field.full{grid-column:1/-1}
-.note-field textarea{min-height:50px}
-
-/* Preview card */
-.preview-card{display:none;background:var(--paper-aged);border:1px solid rgba(26,20,16,.14);border-radius:4px;padding:2.2rem;position:relative;overflow:hidden;margin-bottom:1.4rem}
-.preview-card.visible{display:block}
-.wm{position:absolute;font-family:'Kaisei Decol',serif;font-size:8rem;color:rgba(26,20,16,.02);top:50%;left:50%;transform:translate(-50%,-50%) rotate(-20deg);pointer-events:none;white-space:nowrap;letter-spacing:.1em}
-.preview-inner{display:flex;gap:2.5rem;position:relative}
-.preview-bottle{flex:0 0 170px;height:420px}
-#previewCanvas{width:170px;height:420px}
-.preview-notes{flex:1}
-.prev-name{font-family:'Kaisei Decol',serif;font-size:1.9rem;font-weight:700;letter-spacing:.15em;margin-bottom:1.15rem;line-height:1.2}
-.prev-fields{display:grid;grid-template-columns:1fr 1fr;gap:1rem 1.5rem}
-.pf{border-bottom:1px solid rgba(26,20,16,.1);padding-bottom:.52rem}
-.pf-label{font-size:.57rem;letter-spacing:.2em;color:var(--sepia);text-transform:uppercase;margin-bottom:.1rem}
-.pf-value{font-family:'Ma Shan Zheng',cursive;font-size:1.15rem;line-height:1.4}
-.pf.full{grid-column:1/-1}
-.brush-deco{position:absolute;bottom:-12px;right:-12px;opacity:.05;pointer-events:none}
-
-/* Export bar */
-.export-bar{display:none;align-items:center;gap:.85rem;padding:.9rem 1.2rem;background:rgba(26,20,16,.04);border:1px solid rgba(26,20,16,.1);border-radius:3px;margin-bottom:2rem;flex-wrap:wrap}
-.export-bar.visible{display:flex}
-.export-bar > span{font-size:.78rem;color:var(--sepia);letter-spacing:.1em;margin-right:auto}
-.size-select{font-family:'Noto Serif JP',serif;font-size:.76rem;border:1px solid rgba(26,20,16,.25);background:var(--paper);color:var(--ink);padding:.36rem .55rem;border-radius:2px;outline:none;cursor:pointer}
-
-/* GitHub */
-.github-bar{margin-top:2.5rem;text-align:center;padding-top:1.4rem;border-top:1px solid rgba(26,20,16,.1)}
-.github-bar a{display:inline-flex;align-items:center;gap:.5rem;color:var(--ink);text-decoration:none;font-size:.78rem;letter-spacing:.1em;border-bottom:1px solid rgba(26,20,16,.27);padding-bottom:2px;transition:opacity .2s}
-.github-bar a:hover{opacity:.55}
-
-/* Toast */
-.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:.62rem 1.5rem;border-radius:2px;font-size:.79rem;letter-spacing:.1em;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;z-index:999}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
-/* Spinner */
-.spinner-overlay{display:none;position:fixed;inset:0;background:rgba(247,243,236,.82);z-index:998;align-items:center;justify-content:center;flex-direction:column;gap:1rem}
-.spinner-overlay.visible{display:flex}
-.spinner{width:34px;height:34px;border:2px solid rgba(26,20,16,.13);border-top-color:var(--ink);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.spinner-overlay p{font-size:.79rem;color:var(--sepia);letter-spacing:.12em}
-
-@media(max-width:700px){
-  .main-section{flex-direction:column}
-  .bottle-panel{flex:none}
-  .note-grid{grid-template-columns:1fr}
-  .preview-inner{flex-direction:column}
-  .preview-bottle{flex:none;height:240px}
-  .prev-fields{grid-template-columns:1fr}
-}
-</style>
-</head>
-<body>
-
-<div class="spinner-overlay" id="spinnerOverlay">
-  <div class="spinner"></div>
-  <p id="spinnerMsg">匯出中，請稍候…</p>
-</div>
-<div class="toast" id="toast"></div>
-
-<div class="app-wrapper">
-
-  <header class="header">
-    <h1>清　酒　手　帖<span></span></h1>
-    <p>SAKE　HANDDRAWN　NOTE</p>
-  </header>
-
-  <div class="upload-zone" id="uploadZone">
-    <input type="file" id="fileInput" accept="image/*">
-    <span class="upload-icon">🍶</span>
-    <p>點擊或拖曳上傳清酒瓶照片</p>
-    <small>支援 JPG · PNG · WEBP｜照片僅暫時存於本機，不會上傳伺服器</small>
-  </div>
-
-  <div class="main-section" id="mainSection">
-
-    <!-- Bottle canvas -->
-    <div class="bottle-panel">
-      <div class="bottle-canvas-wrap">
-        <canvas id="photoCanvas"  width="270" height="510"></canvas>
-        <canvas id="filterCanvas" width="270" height="510"></canvas>
-        <canvas id="lineCanvas"   width="270" height="510"></canvas>
-      </div>
-    </div>
-
-    <!-- Notes -->
-    <div class="notes-panel">
-
-      <div class="section-label">線稿設定</div>
-
-      <div class="ctrl-row">
-        <label>輪廓靈敏度</label>
-        <input type="range" id="traceSlider" min="0" max="100" value="62">
-        <span id="traceVal">62</span>
-        <label style="margin-left:.5rem">底圖透明度</label>
-        <input type="range" id="opacitySlider" min="5" max="60" value="20">
-        <span id="opacityVal">20</span>%
-      </div>
-
-      <!-- Label suppression zone sliders -->
-      <div class="ctrl-row">
-        <label title="從瓶頂往下，此範圍內只保留外輪廓">遮罩上緣</label>
-        <input type="range" id="maskTop" min="0" max="85" value="28">
-        <span id="maskTopVal">28</span>%
-        <label style="margin-left:.5rem" title="從瓶底往上，此範圍內只保留外輪廓">遮罩下緣</label>
-        <input type="range" id="maskBot" min="0" max="85" value="22">
-        <span id="maskBotVal">22</span>%
-        <label style="margin-left:.5rem" title="輪廓邊緣保留寬度">邊緣寬</label>
-        <input type="range" id="marginSlider" min="3" max="30" value="10">
-        <span id="marginVal">10</span>px
-        <label style="margin-left:.5rem" title="線稿向外擴張距離（px）">外擴距離</label>
-        <input type="range" id="expandSlider" min="0" max="24" value="10">
-        <span id="expandVal">10</span>px
-      </div>
-
-      <!-- Line color + thickness -->
-      <div class="tone-row">
-        <label>線條顏色</label>
-        <div class="tone-pill active" data-color="#1a1410" style="background:#1a1410" title="墨黑" onclick="setTone(this,'#1a1410')"></div>
-        <div class="tone-pill" data-color="#3d2b1f" style="background:#3d2b1f" title="深茶" onclick="setTone(this,'#3d2b1f')"></div>
-        <div class="tone-pill" data-color="#5a3e28" style="background:#5a3e28" title="棕褐" onclick="setTone(this,'#5a3e28')"></div>
-        <div class="tone-pill" data-color="#6b4226" style="background:#6b4226" title="赤茶" onclick="setTone(this,'#6b4226')"></div>
-        <div class="tone-pill" data-color="#2c4a2e" style="background:#2c4a2e" title="苔綠" onclick="setTone(this,'#2c4a2e')"></div>
-        <div class="tone-pill" data-color="#1e3a5f" style="background:#1e3a5f" title="藏青" onclick="setTone(this,'#1e3a5f')"></div>
-        <div class="tone-pill" data-color="#8b2020" style="background:#8b2020" title="辰砂" onclick="setTone(this,'#8b2020')"></div>
-        <div class="tone-pill" data-color="#f5f0e8" style="background:#f5f0e8;border:1px solid #bbb" title="白稿" onclick="setTone(this,'#f5f0e8')"></div>
-        <label style="margin-left:.4rem">自訂</label>
-        <input type="color" id="lineColorPicker" value="#1a1410"
-          style="width:21px;height:21px;border:1px solid rgba(26,20,16,.25);border-radius:50%;padding:0;cursor:pointer;background:none;outline:none;-webkit-appearance:none;overflow:hidden;flex-shrink:0"
-          oninput="setCustomLineColor(this.value)" onchange="setCustomLineColor(this.value)">
-        <label style="margin-left:.7rem">粗細</label>
-        <input type="range" id="lineWidthSlider" min="1" max="8" step="0.5" value="1.5" style="width:70px;accent-color:var(--ink)">
-        <span style="font-size:.73rem;color:var(--ink);min-width:22px" id="lineWidthVal">1.5</span>
-      </div>
-
-      <!-- Filter panel -->
-      <div class="filter-row">
-        <label>濾鏡</label>
-        <div class="filter-chips">
-          <span class="fchip active" data-mode="none" onclick="setFilter(this,'none')">無</span>
-          <span class="fchip fc-dark" data-mode="dark" onclick="setFilter(this,'dark')">深色</span>
-          <span class="fchip fc-light" data-mode="light" onclick="setFilter(this,'light')">淺色</span>
-          <span class="fchip fc-warm" data-mode="warm" onclick="setFilter(this,'warm')">暖調</span>
-          <span class="fchip fc-cool" data-mode="cool" onclick="setFilter(this,'cool')">冷調</span>
-          <span class="fchip fc-sepia" data-mode="sepia" onclick="setFilter(this,'sepia')">褪色</span>
-          <span class="fchip fc-custom" data-mode="custom" onclick="setFilter(this,'custom')">自訂</span>
-        </div>
-        <input type="color" id="filterColorPicker" value="#ede8dc"
-          style="width:21px;height:21px;border:1px solid rgba(26,20,16,.25);border-radius:50%;padding:0;cursor:pointer;background:none;outline:none;-webkit-appearance:none;overflow:hidden;flex-shrink:0;display:none"
-          oninput="applyFilter()" onchange="applyFilter()">
-        <label style="margin-left:.7rem">透明度</label>
-        <input type="range" id="filterOpacity" min="0" max="95" value="35" style="width:80px;accent-color:var(--ink)">
-        <span style="font-size:.73rem;color:var(--ink);min-width:26px" id="filterOpacityVal">35</span>%
-      </div>
-
-      <div class="btn-row">
-        <button class="btn" onclick="traceBottle()">✦ 重新繪製線稿</button>
-        <button class="btn outline" onclick="clearLine()">清除線稿</button>
-        <button class="btn accent" onclick="showPreview()">生成介紹卡</button>
-        <button class="btn outline" onclick="resetAll()">重新上傳</button>
-      </div>
-
-      <div class="section-label">清酒筆記</div>
-      <div class="notes-paper">
-        <div class="sake-stamp"><span class="sm">清酒</span><span>SAKE</span><span>品評</span></div>
-        <div class="note-title" id="noteTitle">清酒名稱</div>
-        <div class="note-grid">
-
-          <!-- 酒名 -->
-          <div class="note-field">
-            <div class="field-head">
-              <label>酒名 <span class="ja">銘柄</span></label>
-              <div class="fstyle">
-                <input type="color" value="#1a1410" title="文字顏色"
-                  oninput="applyStyle('f_name',this.value,null)"
-                  onchange="applyStyle('f_name',this.value,null)">
-                <select title="字級" onchange="applyStyle('f_name',null,this.value)">
-                  <option value="0.88rem">小</option>
-                  <option value="1.05rem" selected>中</option>
-                  <option value="1.28rem">大</option>
-                  <option value="1.55rem">特大</option>
-                </select>
-              </div>
-            </div>
-            <input id="f_name" type="text" placeholder="例：獺祭 二割三分"
-              style="font-size:1.05rem;color:#1a1410" oninput="liveTitle(); syncPreviewText()">
-          </div>
-
-          <!-- 酒造 -->
-          <div class="note-field">
-            <div class="field-head">
-              <label>酒造 <span class="ja">蔵元</span></label>
-              <div class="fstyle">
-                <input type="color" value="#1a1410" title="文字顏色"
-                  oninput="applyStyle('f_brewery',this.value,null)"
-                  onchange="applyStyle('f_brewery',this.value,null)">
-                <select title="字級" onchange="applyStyle('f_brewery',null,this.value)">
-                  <option value="0.88rem">小</option>
-                  <option value="1.05rem" selected>中</option>
-                  <option value="1.28rem">大</option>
-                  <option value="1.55rem">特大</option>
-                </select>
-              </div>
-            </div>
-            <input id="f_brewery" type="text" placeholder="例：旭酒造"
-              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()" oninput="syncPreviewText()">
-          </div>
-
-          <!-- 產地 -->
-          <div class="note-field">
-            <div class="field-head">
-              <label>產地 <span class="ja">産地</span></label>
-              <div class="fstyle">
-                <input type="color" value="#1a1410" title="文字顏色"
-                  oninput="applyStyle('f_origin',this.value,null)"
-                  onchange="applyStyle('f_origin',this.value,null)">
-                <select title="字級" onchange="applyStyle('f_origin',null,this.value)">
-                  <option value="0.88rem">小</option>
-                  <option value="1.05rem" selected>中</option>
-                  <option value="1.28rem">大</option>
-                  <option value="1.55rem">特大</option>
-                </select>
-              </div>
-            </div>
-            <input id="f_origin" type="text" placeholder="例：山口縣岩國市"
-              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()" oninput="syncPreviewText()">
-          </div>
-
-          <!-- 年份 -->
-          <div class="note-field">
-            <div class="field-head">
-              <label>年份 <span class="ja">年度</span></label>
-              <div class="fstyle">
-                <input type="color" value="#1a1410" title="文字顏色"
-                  oninput="applyStyle('f_year',this.value,null)"
-                  onchange="applyStyle('f_year',this.value,null)">
-                <select title="字級" onchange="applyStyle('f_year',null,this.value)">
-                  <option value="0.88rem">小</option>
-                  <option value="1.05rem" selected>中</option>
-                  <option value="1.28rem">大</option>
-                  <option value="1.55rem">特大</option>
-                </select>
-              </div>
-            </div>
-            <input id="f_year" type="text" placeholder="例：令和六年"
-              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()" oninput="syncPreviewText()">
-          </div>
-
-          <!-- 釀造類別 -->
-          <div class="note-field">
-            <div class="field-head">
-              <label>釀造類別 <span class="ja">種別</span></label>
-              <div class="fstyle">
-                <input type="color" value="#1a1410" title="文字顏色"
-                  oninput="applyStyle('f_type',this.value,null)"
-                  onchange="applyStyle('f_type',this.value,null)">
-                <select title="字級" onchange="applyStyle('f_type',null,this.value)">
-                  <option value="0.88rem">小</option>
-                  <option value="1.05rem" selected>中</option>
-                  <option value="1.28rem">大</option>
-                  <option value="1.55rem">特大</option>
-                </select>
-              </div>
-            </div>
-            <input id="f_type" type="text" placeholder="例：純米大吟釀"
-              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()" oninput="syncPreviewText()">
-          </div>
-
-          <!-- 精米步合 -->
-          <div class="note-field">
-            <div class="field-head">
-              <label>精米步合 <span class="ja">精米歩合</span></label>
-              <div class="fstyle">
-                <input type="color" value="#1a1410" title="文字顏色"
-                  oninput="applyStyle('f_rice',this.value,null)"
-                  onchange="applyStyle('f_rice',this.value,null)">
-                <select title="字級" onchange="applyStyle('f_rice',null,this.value)">
-                  <option value="0.88rem">小</option>
-                  <option value="1.05rem" selected>中</option>
-                  <option value="1.28rem">大</option>
-                  <option value="1.55rem">特大</option>
-                </select>
-              </div>
-            </div>
-            <input id="f_rice" type="text" placeholder="例：23%"
-              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()" oninput="syncPreviewText()">
-          </div>
-
-          <!-- 口感品評 -->
-          <div class="note-field full">
-            <div class="field-head">
-              <label>口感品評 <span class="ja">テイスティング</span></label>
-              <div class="fstyle">
-                <input type="color" value="#1a1410" title="文字顏色"
-                  oninput="applyStyle('f_taste',this.value,null)"
-                  onchange="applyStyle('f_taste',this.value,null)">
-                <select title="字級" onchange="applyStyle('f_taste',null,this.value)">
-                  <option value="0.82rem">小</option>
-                  <option value="1.0rem" selected>中</option>
-                  <option value="1.18rem">大</option>
-                  <option value="1.38rem">特大</option>
-                </select>
-              </div>
-            </div>
-            <textarea id="f_taste" rows="3"
-              placeholder="例：清雅細膩，入口如花香瀰漫，帶梨與白桃果香，酸度優雅，餘韻悠長綿密。"
-              style="font-size:1.0rem;color:#1a1410" oninput="syncPreviewText()"></textarea>
-          </div>
-
-        </div><!-- /note-grid -->
-      </div><!-- /notes-paper -->
-    </div><!-- /notes-panel -->
-  </div><!-- /main-section -->
-
-  <!-- Preview card -->
-  <div class="preview-card" id="previewCard">
-    <div class="wm">清酒</div>
-    <div class="section-label">介紹卡預覽</div>
-    <div class="preview-inner" id="previewInner">
-      <div class="preview-bottle">
-        <canvas id="previewCanvas" width="170" height="420"></canvas>
-      </div>
-      <div class="preview-notes">
-        <div class="prev-name" id="prev_name">—</div>
-        <div class="prev-fields">
-          <div class="pf"><div class="pf-label">產地 / 産地</div><div class="pf-value" id="prev_origin">—</div></div>
-          <div class="pf"><div class="pf-label">酒造 / 蔵元</div><div class="pf-value" id="prev_brewery">—</div></div>
-          <div class="pf"><div class="pf-label">年份</div><div class="pf-value" id="prev_year">—</div></div>
-          <div class="pf"><div class="pf-label">釀造類別</div><div class="pf-value" id="prev_type">—</div></div>
-          <div class="pf"><div class="pf-label">精米步合</div><div class="pf-value" id="prev_rice">—</div></div>
-          <div class="pf full"><div class="pf-label">口感品評</div><div class="pf-value" id="prev_taste">—</div></div>
-        </div>
-      </div>
-    </div>
-    <svg class="brush-deco" width="200" height="200" viewBox="0 0 200 200" fill="none">
-      <path d="M20,180 Q60,100 100,80 Q140,60 170,20" stroke="#1a1410" stroke-width="8" stroke-linecap="round" fill="none"/>
-      <path d="M15,185 Q55,105 95,85 Q135,65 165,25" stroke="#1a1410" stroke-width="2" stroke-linecap="round" fill="none"/>
-    </svg>
-  </div>
-
-  <!-- Export bar -->
-  <div class="export-bar" id="exportBar">
-    <span>✦ 匯出介紹卡</span>
-    <select class="size-select" id="sizeSelect">
-      <option value="1">標準 1×</option>
-      <option value="2" selected>高清 2×</option>
-      <option value="3">超清 3×</option>
-    </select>
-    <button class="btn green" onclick="exportPNG()">⬇ PNG</button>
-    <button class="btn blue"  onclick="exportJPG()">⬇ JPG</button>
-    <button class="btn outline" onclick="exportBottleOnly()">🍶 僅線稿 PNG</button>
-  </div>
-
-  <div class="github-bar">
-    <a href="https://github.com/" target="_blank">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-      前往 GitHub 部署
-    </a>
-  </div>
-</div>
-
-<script>
-// ── State ──
-let uploadedImage = null;
-let photoCtx = null, lineCtx = null, filterCtx = null;
-const W = 270, H = 510;
-let lineColor = '#1a1410';
-let filterMode = 'none';
-
-const FILTER_COLORS = {
-  dark:  {r:0,   g:0,   b:0  },
-  light: {r:255, g:250, b:240},
-  warm:  {r:180, g:100, b:30 },
-  cool:  {r:40,  g:90,  b:160},
-  sepia: {r:139, g:111, b:71 },
-};
-
-const FIELDS = ['name','brewery','origin','year','type','rice','taste'];
-
-const fieldStyles = {
-  f_name:    {color:'#1a1410', size:'1.05rem'},
-  f_brewery: {color:'#1a1410', size:'1.05rem'},
-  f_origin:  {color:'#1a1410', size:'1.05rem'},
-  f_year:    {color:'#1a1410', size:'1.05rem'},
-  f_type:    {color:'#1a1410', size:'1.05rem'},
-  f_rice:    {color:'#1a1410', size:'1.05rem'},
-  f_taste:   {color:'#1a1410', size:'1.0rem'},
-};
-
-// ── Helpers ──
-function hexToRgb(hex) {
-  const h = hex.replace('#','');
-  return { r:parseInt(h.slice(0,2),16), g:parseInt(h.slice(2,4),16), b:parseInt(h.slice(4,6),16) };
-}
-
-function getFieldVal(k) {
-  const el = document.getElementById('f_'+k);
-  return el ? el.value.trim() : '';
-}
-
-// ── Per-field style ──
-function applyStyle(id, color, size) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (color !== null) { fieldStyles[id].color = color; el.style.color = color; }
-  if (size  !== null) { fieldStyles[id].size  = size;  el.style.fontSize = size; }
-  syncPreviewText();
-}
-
-// ── Line color: preset pills ──
-function setTone(pill, color) {
-  document.querySelectorAll('.tone-pill').forEach(p => p.classList.remove('active'));
-  pill.classList.add('active');
-  lineColor = color;
-  document.getElementById('lineColorPicker').value = color;
-  traceBottle();
-}
-
-function setCustomLineColor(color) {
-  document.querySelectorAll('.tone-pill').forEach(p => p.classList.remove('active'));
-  lineColor = color;
-  traceBottle();
-}
-
-// ── Filter ──
-function setFilter(chip, mode) {
-  document.querySelectorAll('.fchip').forEach(c => c.classList.remove('active'));
-  chip.classList.add('active');
-  filterMode = mode;
-  document.getElementById('filterColorPicker').style.display = mode === 'custom' ? 'block' : 'none';
-  applyFilter();
-}
-
-function applyFilter() {
-  const fc = document.getElementById('filterCanvas');
-  if (!fc) return;
-  const ctx = fc.getContext('2d');
-  ctx.clearRect(0, 0, W, H);
-  if (filterMode === 'none') { renderPreviewCanvas(); return; }
-  const opacity = parseInt(document.getElementById('filterOpacity').value) / 100;
-  let r, g, b;
-  if (filterMode === 'custom') {
-    const rgb = hexToRgb(document.getElementById('filterColorPicker').value);
-    r=rgb.r; g=rgb.g; b=rgb.b;
-  } else {
-    const fc2 = FILTER_COLORS[filterMode];
-    r=fc2.r; g=fc2.g; b=fc2.b;
-  }
-  ctx.globalAlpha = opacity;
-  ctx.fillStyle = `rgb(${r},${g},${b})`;
-  ctx.fillRect(0, 0, W, H);
-  ctx.globalAlpha = 1;
-  renderPreviewCanvas();
-}
-
-// ── Upload ──
-const uploadZone = document.getElementById('uploadZone');
-const fileInput  = document.getElementById('fileInput');
-uploadZone.addEventListener('click', () => fileInput.click());
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragging'); });
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragging'));
-uploadZone.addEventListener('drop', e => {
-  e.preventDefault(); uploadZone.classList.remove('dragging');
-  const f = e.dataTransfer.files[0];
-  if (f && f.type.startsWith('image/')) loadFile(f);
-});
-fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
-
-function loadFile(file) {
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const img = new Image();
-    img.onload = () => {
-      uploadedImage = img;
-      photoCtx  = document.getElementById('photoCanvas').getContext('2d');
-      filterCtx = document.getElementById('filterCanvas').getContext('2d');
-      lineCtx   = document.getElementById('lineCanvas').getContext('2d');
-      uploadZone.style.display = 'none';
-      document.getElementById('mainSection').classList.add('visible');
-      drawPhoto();
-      applyFilter();
-      setTimeout(traceBottle, 500);
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-// ── Draw photo background ──
-function drawPhoto() {
-  if (!uploadedImage || !photoCtx) return;
-  const op = parseInt(document.getElementById('opacitySlider').value) / 100;
-  photoCtx.clearRect(0, 0, W, H);
-  const s = Math.min(W/uploadedImage.width, H/uploadedImage.height);
-  const dw = uploadedImage.width*s, dh = uploadedImage.height*s;
-  photoCtx.globalAlpha = op;
-  photoCtx.drawImage(uploadedImage, (W-dw)/2, (H-dh)/2, dw, dh);
-  photoCtx.globalAlpha = 1;
-}
-
-// ── Trace bottle outline ──
-// Clean approach:
-// 1. Render photo → grayscale → Gaussian blur (suppresses label text)
-// 2. Sobel edge detection
-// 3. Label-zone mask: in the label area, only keep outer silhouette band
-// 4. Write edgeBin pixels onto an offscreen canvas with lineWidth stroke
-// 5. Outward expand: CSS blur + brightness threshold on a second offscreen canvas
-//    This correctly fattens/offsets the line without any arc-fill artifacts.
-
-function traceBottle() {
-  if (!uploadedImage || !lineCtx) return;
-
-  const threshold  = parseInt(document.getElementById('traceSlider').value);
-  const maskTopPct = parseInt(document.getElementById('maskTop').value) / 100;
-  const maskBotPct = parseInt(document.getElementById('maskBot').value) / 100;
-  const edgeMargin = parseInt(document.getElementById('marginSlider').value);
-  const expand     = parseInt(document.getElementById('expandSlider').value);
-  const lw         = parseFloat(document.getElementById('lineWidthSlider').value);
-  const lc         = hexToRgb(lineColor);
-  const colStr     = `rgb(${lc.r},${lc.g},${lc.b})`;
-
-  // ── Step 1: render photo to offscreen ──
-  const off = document.createElement('canvas');
-  off.width = W; off.height = H;
-  const oc = off.getContext('2d');
-  oc.fillStyle = '#ffffff';
-  oc.fillRect(0, 0, W, H);
-  const sc = Math.min(W/uploadedImage.width, H/uploadedImage.height);
-  const dw = uploadedImage.width*sc, dh = uploadedImage.height*sc;
-  oc.drawImage(uploadedImage, (W-dw)/2, (H-dh)/2, dw, dh);
-  const rawData = oc.getImageData(0, 0, W, H).data;
-
-  // ── Step 2: grayscale ──
-  const gray = new Float32Array(W * H);
-  for (let i = 0; i < W*H; i++) {
-    gray[i] = 0.299*rawData[i*4] + 0.587*rawData[i*4+1] + 0.114*rawData[i*4+2];
-  }
-
-  // ── Step 3: Gaussian blur (3 passes) ──
-  function gaussPass(src) {
-    const dst = new Float32Array(W * H);
-    for (let y = 1; y < H-1; y++) {
-      for (let x = 1; x < W-1; x++) {
-        dst[y*W+x] = (
-          src[(y-1)*W+(x-1)] + 2*src[(y-1)*W+x] + src[(y-1)*W+(x+1)] +
-          2*src[y*W+(x-1)]   + 4*src[y*W+x]     + 2*src[y*W+(x+1)]   +
-          src[(y+1)*W+(x-1)] + 2*src[(y+1)*W+x] + src[(y+1)*W+(x+1)]
-        ) / 16;
-      }
-    }
-    return dst;
-  }
-  let blurred = gaussPass(gray);
-  blurred = gaussPass(blurred); blurred = gaussPass(blurred);
-
-  // ── Step 4: Sobel ──
-  const edgeMag = new Float32Array(W * H);
-  let maxE = 0;
-  for (let y = 1; y < H-1; y++) {
-    for (let x = 1; x < W-1; x++) {
-      const i = y*W+x;
-      const gx = -blurred[(y-1)*W+(x-1)] - 2*blurred[y*W+(x-1)] - blurred[(y+1)*W+(x-1)]
-                 +blurred[(y-1)*W+(x+1)] + 2*blurred[y*W+(x+1)] + blurred[(y+1)*W+(x+1)];
-      const gy = -blurred[(y-1)*W+(x-1)] - 2*blurred[(y-1)*W+x] - blurred[(y-1)*W+(x+1)]
-                 +blurred[(y+1)*W+(x-1)] + 2*blurred[(y+1)*W+x] + blurred[(y+1)*W+(x+1)];
-      edgeMag[i] = Math.sqrt(gx*gx + gy*gy);
-      if (edgeMag[i] > maxE) maxE = edgeMag[i];
-    }
-  }
-
-  const cut = (threshold / 100) * maxE;
-  const labelTop = Math.floor(H * maskTopPct);
-  const labelBot = Math.floor(H * (1 - maskBotPct));
-
-  // ── Step 5: build edgeBin with label-zone masking ──
-  const edgeBin = new Uint8Array(W * H);
-  for (let y = 1; y < H-1; y++) {
-    // Find outer silhouette boundary for this row
-    let leftSil = -1, rightSil = -1;
-    for (let x = 1; x < W-1; x++) {
-      if (edgeMag[y*W+x] > cut * 0.35) {
-        if (leftSil < 0) leftSil = x;
-        rightSil = x;
-      }
-    }
-    const inLabel = (y >= labelTop && y <= labelBot);
-    for (let x = 1; x < W-1; x++) {
-      if (edgeMag[y*W+x] <= cut) continue;
-      if (inLabel && leftSil >= 0) {
-        if (x > leftSil + edgeMargin && x < rightSil - edgeMargin) continue;
-      }
-      edgeBin[y*W+x] = 1;
-    }
-  }
-
-  // ── Step 6: draw edge pixels onto a tmp canvas as stroked paths ──
-  // Use lineWidth = lw + expand*2 so the stroke naturally expands outward.
-  // Then composite onto lineCtx.
-  const strokeWidth = lw + expand * 2;
-
-  const tmp1 = document.createElement('canvas');
-  tmp1.width = W; tmp1.height = H;
-  const tc1 = tmp1.getContext('2d');
-  tc1.strokeStyle = colStr;
-  tc1.lineWidth   = strokeWidth;
-  tc1.lineCap     = 'round';
-  tc1.lineJoin    = 'round';
-
-  // Collect contour segments per row and draw
-  for (let y = 0; y < H; y++) {
-    let segStart = -1;
-    for (let x = 0; x <= W; x++) {
-      const on = x < W && edgeBin[y*W+x];
-      if (on && segStart < 0) { segStart = x; }
-      else if (!on && segStart >= 0) {
-        tc1.beginPath();
-        tc1.moveTo(segStart, y);
-        tc1.lineTo(x - 1, y);
-        tc1.stroke();
-        segStart = -1;
-      }
-    }
-  }
-  // Also draw vertical segments for continuity
-  for (let x = 0; x < W; x++) {
-    let segStart = -1;
-    for (let y = 0; y <= H; y++) {
-      const on = y < H && edgeBin[y*W+x];
-      if (on && segStart < 0) { segStart = y; }
-      else if (!on && segStart >= 0) {
-        if (y - segStart > 1) {
-          tc1.beginPath();
-          tc1.moveTo(x, segStart);
-          tc1.lineTo(x, y - 1);
-          tc1.stroke();
-        }
-        segStart = -1;
-      }
-    }
-  }
-
-  // ── Step 7: if expand > 0, use CSS blur to diffuse the stroke outward,
-  //    then draw on top of a fresh canvas to get a clean offset ring ──
-  lineCtx.clearRect(0, 0, W, H);
-
-  if (expand > 0) {
-    // Draw blurred (expanded) version first at low alpha
-    lineCtx.save();
-    lineCtx.filter = `blur(${Math.round(expand * 0.7)}px)`;
-    lineCtx.globalAlpha = 0.75;
-    lineCtx.drawImage(tmp1, 0, 0);
-    lineCtx.filter = 'none';
-    // Draw original on top for crisp core
-    lineCtx.globalAlpha = 0.85;
-    lineCtx.drawImage(tmp1, 0, 0);
-    lineCtx.globalAlpha = 1;
-    lineCtx.restore();
-  } else {
-    lineCtx.globalAlpha = 0.88;
-    lineCtx.drawImage(tmp1, 0, 0);
-    lineCtx.globalAlpha = 1;
-  }
-
-  // ── Subtle brush texture ──
-  lineCtx.save();
-  lineCtx.globalAlpha = 0.015;
-  for (let i = 0; i < 50; i++) {
-    const x = Math.random()*W, y = Math.random()*H;
-    const l = Math.random()*9+2;
-    lineCtx.beginPath();
-    lineCtx.moveTo(x, y);
-    lineCtx.lineTo(x + l*(Math.random()-.5), y + l*(Math.random()-.5));
-    lineCtx.strokeStyle = colStr;
-    lineCtx.lineWidth = Math.random()*1.2;
-    lineCtx.stroke();
-  }
-  lineCtx.restore();
-
-  // Refresh preview if open
   if (document.getElementById('previewCard').classList.contains('visible')) {
     renderPreviewCanvas();
   }
 }
-function clearLine() { if (lineCtx) lineCtx.clearRect(0, 0, W, H); }
 
-// ── Slider listeners ──
-['traceSlider','opacitySlider','maskTop','maskBot','marginSlider','expandSlider','lineWidthSlider','filterOpacity'].forEach(id => {
-  const valId = {
-    traceSlider:'traceVal', opacitySlider:'opacityVal',
-    maskTop:'maskTopVal', maskBot:'maskBotVal',
-    marginSlider:'marginVal', expandSlider:'expandVal',
-    lineWidthSlider:'lineWidthVal', filterOpacity:'filterOpacityVal'
-  }[id];
-  document.getElementById(id).addEventListener('input', function() {
-    if (valId) document.getElementById(valId).textContent = this.value;
-    if (id === 'opacitySlider') drawPhoto();
-    else if (id === 'filterOpacity') applyFilter();
-    else traceBottle();
-  });
-});
+// ── All-in-one canvas renderer ──
+// Full resolution: 1536 × 1920 (4:5, long edge 1920px)
+// Preview is CSS-scaled to fit screen; export uses full res.
 
-// ── Live title ──
-function liveTitle() {
-  const v = getFieldVal('name');
-  document.getElementById('noteTitle').textContent = v || '清酒名稱';
-  syncPreviewText();
-}
+const CARD_W = 1536;   // 4:5 → width
+const CARD_H = 1920;   // 4:5 → height (long edge)
 
-// ── Sync preview text ──
-// Maps: f_name→prev_name (big heading), others→prev_{k}
-function syncPreviewText() {
-  // Big heading = f_name
-  const nameVal = getFieldVal('name');
-  const nameEl  = document.getElementById('prev_name');
-  if (nameEl) {
-    nameEl.textContent  = nameVal || '—';
-    nameEl.style.color  = fieldStyles['f_name'].color;
+function renderPreviewCanvas(targetCanvas) {
+  const pvc = targetCanvas || document.getElementById('previewCanvas');
+  if (!pvc) return;
+
+  const CW = CARD_W, CH = CARD_H;
+  pvc.width  = CW;
+  pvc.height = CH;
+  const pc = pvc.getContext('2d');
+
+  // ── Scale factor for UI elements (fonts, strokes, etc.) ──
+  // Everything designed at base 680×850 then scaled up ~2.26×
+  const SC = CW / 680;
+
+  // ── Background: aged paper ──
+  pc.fillStyle = '#ede8dc';
+  pc.fillRect(0, 0, CW, CH);
+
+  // Subtle horizontal lines
+  pc.save();
+  pc.strokeStyle = 'rgba(26,20,16,0.055)';
+  pc.lineWidth = SC * 0.5;
+  const lineStep = SC * 38;
+  for (let y = lineStep; y < CH; y += lineStep) {
+    pc.beginPath(); pc.moveTo(0, y); pc.lineTo(CW, y); pc.stroke();
+  }
+  pc.restore();
+
+  // ── Bottle zone: centred, tall ──
+  const BW = Math.round(CW * 0.30);           // 30% of width
+  const BH = Math.round(CH * 0.78);           // 78% of height
+  const BX = Math.round((CW - BW) / 2);
+  const BY = Math.round(CH * 0.13);           // top margin 13%
+
+  // Light paper bg behind bottle
+  pc.save();
+  pc.fillStyle = 'rgba(247,243,236,0.5)';
+  pc.fillRect(BX, BY, BW, BH);
+  pc.restore();
+
+  if (uploadedImage) {
+    const s  = Math.min(BW / uploadedImage.width, BH / uploadedImage.height);
+    const dw = uploadedImage.width * s, dh = uploadedImage.height * s;
+    const dx = BX + (BW - dw) / 2, dy = BY + (BH - dh) / 2;
+    pc.save();
+    pc.globalAlpha = parseInt(document.getElementById('opacitySlider').value) / 100;
+    pc.drawImage(uploadedImage, dx, dy, dw, dh);
+    pc.globalAlpha = 1;
+    pc.restore();
+    // Filter overlay
+    pc.drawImage(document.getElementById('filterCanvas'), BX, BY, BW, BH);
+    // Line art
+    pc.drawImage(document.getElementById('lineCanvas'), BX, BY, BW, BH);
   }
 
-  // Other fields
-  const others = ['brewery','origin','year','type','rice','taste'];
-  others.forEach(k => {
-    const el = document.getElementById('prev_'+k);
-    if (!el) return;
-    const val = getFieldVal(k);
-    el.textContent  = val || '—';
-    el.style.color    = fieldStyles['f_'+k] ? fieldStyles['f_'+k].color : '#1a1410';
-    el.style.fontSize = fieldStyles['f_'+k] ? fieldStyles['f_'+k].size  : '1.05rem';
-  });
-}
+  // Bottle zone border
+  pc.save();
+  pc.strokeStyle = 'rgba(26,20,16,0.14)';
+  pc.lineWidth = SC * 1;
+  pc.strokeRect(BX, BY, BW, BH);
+  pc.restore();
 
-// ── Render preview canvas ──
-function renderPreviewCanvas() {
-  const pvc = document.getElementById('previewCanvas');
-  if (!pvc || !uploadedImage) return;
-  const pc = pvc.getContext('2d');
-  pc.clearRect(0, 0, 170, 420);
-  // Draw photo
-  const s  = Math.min(170/uploadedImage.width, 420/uploadedImage.height);
-  const dw = uploadedImage.width*s, dh = uploadedImage.height*s;
-  pc.globalAlpha = 0.22;
-  pc.drawImage(uploadedImage, (170-dw)/2, (420-dh)/2, dw, dh);
-  pc.globalAlpha = 1;
-  // Draw filter
-  pc.drawImage(document.getElementById('filterCanvas'), 0, 0, 170, 420);
-  // Draw line art
-  pc.drawImage(document.getElementById('lineCanvas'),   0, 0, 170, 420);
+  // ── Helper: rem → px scaled ──
+  function sizeToPx(sizeStr) {
+    const rem = parseFloat(sizeStr);
+    return Math.round(rem * 16 * SC);
+  }
+
+  // ── Sake name — top centre ──
+  const nameVal   = getFieldVal('name') || '—';
+  const nameColor = fieldStyles['f_name'].color || '#1a1410';
+  const nameFZ    = sizeToPx(fieldStyles['f_name'].size) * 1.8;  // bigger for heading
+  pc.save();
+  pc.font      = `700 ${nameFZ}px 'Kaisei Decol', serif`;
+  pc.fillStyle = nameColor;
+  pc.textAlign = 'center';
+  pc.letterSpacing = `${SC * 6}px`;
+  const nameY  = BY * 0.52;
+  pc.fillText(nameVal, CW / 2, nameY);
+  // Decorative underline
+  const nw2 = pc.measureText(nameVal).width + SC * 60;
+  pc.strokeStyle = 'rgba(26,20,16,0.14)';
+  pc.lineWidth = SC * 0.8;
+  pc.beginPath();
+  pc.moveTo((CW - nw2)/2, nameY + SC*8);
+  pc.lineTo((CW + nw2)/2, nameY + SC*8);
+  pc.stroke();
+  pc.restore();
+
+  // ── Sub-header: SAKE HANDDRAWN NOTE ──
+  pc.save();
+  pc.font      = `400 ${SC*11}px 'Noto Serif JP', serif`;
+  pc.fillStyle = 'rgba(139,111,71,0.7)';
+  pc.textAlign = 'center';
+  pc.letterSpacing = `${SC*4}px`;
+  pc.fillText('SAKE  HANDDRAWN  NOTE', CW/2, BY * 0.78);
+  pc.restore();
+
+  // ── Field layout ──
+  const leftFields  = [
+    {key:'origin',  labelZH:'產地', labelJA:'産地'},
+    {key:'year',    labelZH:'年份', labelJA:'年度'},
+    {key:'taste',   labelZH:'口感品評', labelJA:'テイスティング'},
+  ];
+  const rightFields = [
+    {key:'brewery', labelZH:'酒造', labelJA:'蔵元'},
+    {key:'type',    labelZH:'釀造類別', labelJA:'種別'},
+    {key:'rice',    labelZH:'精米步合', labelJA:'精米歩合'},
+  ];
+
+  const SIDE_PAD   = SC * 28;
+  const COL_W      = BX - SIDE_PAD - SC * 18;
+  const startY     = BY + SC * 32;
+  const fieldGap   = (BH - SC * 40) / 3;
+  const labelFZ    = SC * 11;
+  const sepOffset  = fieldGap - SC * 18;
+
+  function drawField(field, x, y, align, colW) {
+    const val   = getFieldVal(field.key) || '—';
+    const st    = fieldStyles['f_' + field.key] || {color:'#1a1410', size:'1.05rem'};
+    const valFZ = sizeToPx(st.size);
+
+    pc.save();
+    pc.textAlign = align;
+
+    // Label
+    pc.font      = `400 ${labelFZ}px 'Noto Serif JP', serif`;
+    pc.fillStyle = '#8b6f47';
+    pc.letterSpacing = `${SC * 2}px`;
+    pc.fillText(field.labelZH + '  ' + field.labelJA, x, y);
+
+    // Value (with word-wrap for taste)
+    pc.font      = `400 ${valFZ}px 'Ma Shan Zheng', cursive`;
+    pc.fillStyle = st.color;
+    pc.letterSpacing = `${SC * 1}px`;
+
+    if (field.key === 'taste' && val !== '—') {
+      let line = '', lineY = y + valFZ * 1.4, lines = 0;
+      const maxLines = Math.floor(fieldGap / (valFZ * 1.5)) - 1;
+      for (const ch of val.split('')) {
+        const test = line + ch;
+        if (pc.measureText(test).width > colW && line) {
+          pc.fillText(line, x, lineY);
+          line = ch; lineY += valFZ * 1.5; lines++;
+          if (lines >= maxLines) { pc.fillText(line + '…', x, lineY); line = null; break; }
+        } else { line = test; }
+      }
+      if (line) pc.fillText(line, x, lineY);
+    } else {
+      pc.fillText(val, x, y + valFZ * 1.4);
+    }
+
+    // Separator
+    pc.strokeStyle = 'rgba(26,20,16,0.1)';
+    pc.lineWidth = SC * 0.6;
+    pc.beginPath();
+    const sepY = y + sepOffset;
+    if (align === 'left') { pc.moveTo(x, sepY); pc.lineTo(x + colW, sepY); }
+    else                  { pc.moveTo(x - colW, sepY); pc.lineTo(x, sepY); }
+    pc.stroke();
+    pc.restore();
+  }
+
+  leftFields.forEach((f, i) => {
+    drawField(f, SIDE_PAD, startY + i * fieldGap, 'left', COL_W);
+  });
+  const rightX = BX + BW + SC*18 + COL_W;
+  rightFields.forEach((f, i) => {
+    drawField(f, rightX, startY + i * fieldGap, 'right', COL_W);
+  });
+
+  // ── Vertical dividers ──
+  pc.save();
+  pc.strokeStyle = 'rgba(26,20,16,0.1)';
+  pc.lineWidth = SC * 0.7;
+  [[BX - SC*14, BY + SC*12, BY + BH - SC*12],
+   [BX + BW + SC*14, BY + SC*12, BY + BH - SC*12]].forEach(([lx, ly1, ly2]) => {
+    pc.beginPath(); pc.moveTo(lx, ly1); pc.lineTo(lx, ly2); pc.stroke();
+  });
+  pc.restore();
+
+  // ── Bottom credit line ──
+  pc.save();
+  pc.font      = `400 ${SC*10}px 'Noto Serif JP', serif`;
+  pc.fillStyle = 'rgba(139,111,71,0.5)';
+  pc.textAlign = 'center';
+  pc.letterSpacing = `${SC*3}px`;
+  pc.fillText('清 酒 手 帖', CW/2, BY + BH + SC*38);
+  pc.restore();
+
+  // ── Sake stamp (top-right) ──
+  const SR = SC * 30;
+  pc.save();
+  pc.translate(CW - SR - SC*18, SR + SC*20);
+  pc.rotate(-0.2);
+  pc.strokeStyle = 'rgba(139,32,32,0.38)';
+  pc.lineWidth = SC * 1.5;
+  pc.beginPath(); pc.arc(0, 0, SR, 0, Math.PI*2); pc.stroke();
+  pc.font      = `700 ${SC*13}px 'Kaisei Decol', serif`;
+  pc.fillStyle = 'rgba(139,32,32,0.42)';
+  pc.textAlign = 'center';
+  pc.fillText('清酒', 0, -SC*4);
+  pc.font = `400 ${SC*8}px 'Noto Serif JP', serif`;
+  pc.fillText('SAKE',  0,  SC*6);
+  pc.fillText('品評',  0,  SC*16);
+  pc.restore();
 }
 
 // ── Show preview ──
 function showPreview() {
-  syncPreviewText();
-  renderPreviewCanvas();
   document.getElementById('previewCard').classList.add('visible');
   document.getElementById('exportBar').classList.add('visible');
+  renderPreviewCanvas();
   document.getElementById('previewCard').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
@@ -1935,26 +1072,22 @@ async function exportJPG() { await doExport('jpg'); }
 
 async function doExport(fmt) {
   showSpinner(fmt === 'png' ? '正在生成 PNG…' : '正在生成 JPG…');
-  const scale  = parseInt(document.getElementById('sizeSelect').value);
-  const target = document.getElementById('previewInner');
-  const sl     = document.querySelector('.preview-card .section-label');
-  const prevD  = sl ? sl.style.display : '';
-  if (sl) sl.style.display = 'none';
   try {
     await document.fonts.ready;
-    const canvas = await html2canvas(target, {
-      scale, useCORS:true, backgroundColor:'#ede8dc', logging:false
-    });
-    const mime = fmt==='jpg' ? 'image/jpeg' : 'image/png';
-    const url  = canvas.toDataURL(mime, fmt==='jpg' ? 0.92 : 1.0);
-    const name = (getFieldVal('name').replace(/\s+/g,'-') || 'sake-note');
-    const a = document.createElement('a');
-    a.href = url; a.download = `${name}.${fmt}`; a.click();
-    showToast(`✦ 已匯出 ${fmt.toUpperCase()}，品飲愉快！`);
+
+    // Render full-res 1536×1920 onto an offscreen canvas (keeps preview untouched)
+    const expC = document.createElement('canvas');
+    renderPreviewCanvas(expC);   // uses CARD_W/CARD_H internally
+
+    const mime = fmt === 'jpg' ? 'image/jpeg' : 'image/png';
+    const url  = expC.toDataURL(mime, fmt === 'jpg' ? 0.93 : 1.0);
+    const name = (getFieldVal('name').replace(/\s+/g, '-') || 'sake-note');
+    const a    = document.createElement('a');
+    a.href = url; a.download = `${name}_1536x1920.${fmt}`; a.click();
+    showToast(`✦ 已匯出 1536×1920 ${fmt.toUpperCase()}，品飲愉快！`);
   } catch(e) {
     showToast('匯出失敗，請再試一次'); console.error(e);
   } finally {
-    if (sl) sl.style.display = prevD;
     hideSpinner();
   }
 }
