@@ -3,1103 +3,722 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>清酒手帖 · Sake Handdrawn Note</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<title>日系手繪筆記 · Handwritten Note Generator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Noto+Serif+JP:wght@300;400;700&family=Ma+Shan+Zheng&display=swap');
 
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --ink:#1a1410;--paper:#f7f3ec;--paper-aged:#ede8dc;
-  --sepia:#8b6f47;--accent:#8b2020;
+  --cream:#f7f3ec;--aged:#ede8dc;--ink:#1a1410;
+  --sepia:#8b6f47;--accent:#8b2020;--warm:#c4956a;
 }
-body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;color:var(--ink)}
-.app-wrapper{max-width:1020px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+body{background:var(--cream);font-family:'Noto Serif JP',serif;min-height:100vh;color:var(--ink)}
+
+.app{max-width:860px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
 
 /* Header */
 .header{text-align:center;margin-bottom:2.8rem}
-.header h1{font-family:'Kaisei Decol',serif;font-size:2.5rem;font-weight:700;letter-spacing:0.28em}
-.header h1 span{display:block;width:50%;margin:.45rem auto 0;height:1.5px;background:var(--ink);opacity:.18}
-.header p{font-size:.76rem;letter-spacing:.22em;color:var(--sepia);margin-top:.5rem}
+.header h1{font-family:'Kaisei Decol',serif;font-size:2.2rem;font-weight:700;letter-spacing:.25em;color:var(--ink)}
+.header h1::after{content:'';display:block;width:40%;height:1px;background:var(--ink);opacity:.15;margin:.5rem auto 0}
+.header p{font-size:.76rem;letter-spacing:.2em;color:var(--sepia);margin-top:.5rem}
 
 /* Upload */
-.upload-zone{border:1.5px dashed var(--sepia);border-radius:4px;padding:3rem 2rem;text-align:center;cursor:pointer;transition:background .2s;margin-bottom:2rem;background:rgba(139,111,71,.03)}
-.upload-zone:hover{background:rgba(139,111,71,.08)}
-.upload-zone.dragging{background:rgba(139,111,71,.13);border-style:solid}
-.upload-zone input{display:none}
-.upload-icon{font-size:2.4rem;display:block;margin-bottom:.8rem}
-.upload-zone p{color:var(--sepia);font-size:.9rem;letter-spacing:.08em}
-.upload-zone small{font-size:.73rem;color:#b09a7e;margin-top:.3rem;display:block}
-
-/* Main layout */
-.main-section{display:none;gap:2rem;margin-bottom:2rem}
-.main-section.visible{display:flex}
-
-/* Bottle panel */
-.bottle-panel{flex:0 0 270px;background:var(--paper-aged);border:1px solid rgba(26,20,16,.12);border-radius:3px;overflow:hidden}
-.bottle-canvas-wrap{position:relative;width:270px;height:510px}
-#photoCanvas{position:absolute;top:0;left:0;width:270px;height:510px}
-#filterCanvas{position:absolute;top:0;left:0;width:270px;height:510px;pointer-events:none}
-#lineCanvas {position:absolute;top:0;left:0;width:270px;height:510px}
-
-/* Filter row */
-.filter-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;flex-wrap:wrap}
-.filter-row label{font-size:.73rem;color:var(--sepia);letter-spacing:.05em}
-.filter-chips{display:flex;gap:.3rem;flex-wrap:wrap}
-.fchip{
-  font-size:.68rem;padding:.22rem .55rem;border-radius:20px;cursor:pointer;
-  border:1px solid rgba(26,20,16,.2);color:var(--sepia);
-  font-family:'Noto Serif JP',serif;letter-spacing:.05em;
-  transition:all .15s;user-select:none;
+.upload-zone{
+  border:1.5px dashed var(--warm);border-radius:6px;
+  padding:3rem 2rem;text-align:center;cursor:pointer;
+  background:rgba(196,149,106,.04);transition:all .2s;
+  margin-bottom:2rem;position:relative;
 }
-.fchip:hover{border-color:var(--ink);color:var(--ink)}
-.fchip.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.fchip.fc-dark{border-color:#444}
-.fchip.fc-light{border-color:#c8b89a}
-.fchip.fc-warm{border-color:#b87340}
-.fchip.fc-cool{border-color:#3a6a9a}
-.fchip.fc-sepia{border-color:#8b6f47}
-.fchip.fc-custom{border-color:#7a4a8a}
-
-/* Notes panel */
-.notes-panel{flex:1;display:flex;flex-direction:column;gap:0}
-.section-label{font-size:.67rem;letter-spacing:.24em;color:var(--sepia);text-transform:uppercase;margin-bottom:.8rem;display:flex;align-items:center;gap:.8rem}
-.section-label::after{content:'';flex:1;height:1px;background:rgba(26,20,16,.11)}
+.upload-zone:hover{background:rgba(196,149,106,.09);border-style:solid}
+.upload-zone.drag{background:rgba(196,149,106,.14);border-style:solid}
+.upload-zone input{display:none}
+.upload-icon{font-size:2.8rem;display:block;margin-bottom:.8rem}
+.upload-zone h3{font-family:'Kaisei Decol',serif;font-size:1.1rem;color:var(--sepia);letter-spacing:.12em;margin-bottom:.4rem}
+.upload-zone p{font-size:.8rem;color:#b09a7e;letter-spacing:.06em}
 
 /* Controls */
-.ctrl-row{display:flex;align-items:center;gap:.65rem;margin-bottom:.75rem;flex-wrap:wrap}
-.ctrl-row label{font-size:.73rem;color:var(--sepia);letter-spacing:.05em}
-.ctrl-row input[type=range]{width:90px;accent-color:var(--ink)}
-.ctrl-row span{font-size:.73rem;color:var(--ink);min-width:24px}
-
-/* Tone pills */
-.tone-row{display:flex;gap:.42rem;margin-bottom:.9rem;flex-wrap:wrap;align-items:center}
-.tone-row label{font-size:.71rem;color:var(--sepia);letter-spacing:.06em;margin-right:.2rem}
-.tone-pill{width:21px;height:21px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:transform .15s,box-shadow .15s;flex-shrink:0}
-.tone-pill:hover{transform:scale(1.2)}
-.tone-pill.active{border-color:var(--ink);box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--ink)}
-
-/* Buttons */
-.btn-row{display:flex;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap}
-.btn{background:var(--ink);color:var(--paper);border:none;padding:.48rem 1rem;font-family:'Noto Serif JP',serif;font-size:.76rem;letter-spacing:.1em;cursor:pointer;border-radius:2px;transition:opacity .2s}
-.btn:hover{opacity:.72}
-.btn.outline{background:transparent;color:var(--ink);border:1px solid rgba(26,20,16,.35)}
-.btn.accent{background:var(--accent)}
-.btn.green{background:#3a6b2a}
-.btn.blue{background:#1e4a72}
-
-/* Notes paper */
-.notes-paper{
-  background:repeating-linear-gradient(transparent,transparent 37px,rgba(26,20,16,.07) 37px,rgba(26,20,16,.07) 38px),var(--paper);
-  border:1px solid rgba(26,20,16,.12);border-radius:3px;
-  padding:1.4rem 1.4rem 1.4rem 2.9rem;flex:1;position:relative;
+.controls-panel{
+  background:var(--aged);border:1px solid rgba(26,20,16,.1);
+  border-radius:5px;padding:1.4rem 1.6rem;margin-bottom:1.8rem;
+  display:none;
 }
-.notes-paper::before{content:'';position:absolute;left:2.1rem;top:0;bottom:0;width:1px;background:rgba(139,32,32,.22)}
-
-.sake-stamp{
-  width:56px;height:56px;border:2.5px solid var(--accent);border-radius:50%;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  position:absolute;top:1rem;right:1rem;color:var(--accent);
-  font-family:'Kaisei Decol',serif;font-size:.46rem;letter-spacing:.1em;
-  text-align:center;opacity:.47;line-height:1.4;transform:rotate(-12deg);
+.controls-panel.visible{display:block}
+.ctrl-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.ctrl-item label{font-size:.68rem;letter-spacing:.15em;color:var(--sepia);text-transform:uppercase;display:block;margin-bottom:.35rem}
+.ctrl-item select, .ctrl-item input[type=text]{
+  width:100%;border:none;border-bottom:1px solid rgba(26,20,16,.2);
+  background:transparent;padding:.3rem 0;font-size:.88rem;
+  font-family:'Noto Serif JP',serif;color:var(--ink);outline:none;
 }
-.sake-stamp .sm{font-size:.85rem;font-weight:700}
-
-.note-title{font-family:'Kaisei Decol',serif;font-size:1.4rem;letter-spacing:.14em;margin-bottom:1.25rem;padding-bottom:.42rem;border-bottom:1px solid rgba(26,20,16,.14);font-weight:700}
-.note-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem 1.25rem}
-
-/* Field */
-.note-field{position:relative}
-.field-head{display:flex;align-items:center;gap:.38rem;margin-bottom:.18rem;flex-wrap:wrap}
-.field-head > label{font-size:.61rem;letter-spacing:.17em;color:var(--sepia);text-transform:uppercase;flex:1;min-width:60px}
-.field-head .ja{font-size:.66rem;color:rgba(139,111,71,.6)}
-
-/* Style controls inline */
-.fstyle{display:flex;align-items:center;gap:.3rem}
-.fstyle input[type=color]{
-  width:17px;height:17px;border:1px solid rgba(26,20,16,.22);border-radius:50%;
-  padding:0;cursor:pointer;background:none;outline:none;
-  -webkit-appearance:none;overflow:hidden;flex-shrink:0;
-}
-.fstyle input[type=color]::-webkit-color-swatch-wrapper{padding:0}
-.fstyle input[type=color]::-webkit-color-swatch{border:none;border-radius:50%}
-.fstyle select{
-  font-size:.63rem;color:var(--ink);background:var(--paper);
-  border:1px solid rgba(26,20,16,.18);border-radius:2px;
-  outline:none;cursor:pointer;padding:1px 3px;
-  font-family:'Noto Serif JP',serif;
+.ctrl-item.full{grid-column:1/-1}
+.ctrl-item textarea{
+  width:100%;border:1px solid rgba(26,20,16,.15);border-radius:3px;
+  background:rgba(247,243,236,.6);padding:.5rem .6rem;
+  font-size:.85rem;font-family:'Noto Serif JP',serif;
+  color:var(--ink);outline:none;resize:vertical;min-height:72px;
+  line-height:1.65;
 }
 
-.note-field input,.note-field textarea{
-  width:100%;background:transparent;border:none;
-  border-bottom:1px solid rgba(26,20,16,.17);padding:.2rem 0;
-  font-family:'Ma Shan Zheng',cursive;outline:none;
-  transition:border-color .2s;resize:none;line-height:1.65;
+/* Prompt section */
+.prompt-section{margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(26,20,16,.1)}
+.prompt-section h4{font-size:.72rem;letter-spacing:.18em;color:var(--sepia);text-transform:uppercase;margin-bottom:.6rem}
+.prompt-display{
+  font-size:.78rem;color:#7a6a58;line-height:1.7;
+  background:rgba(247,243,236,.8);border-radius:3px;
+  padding:.6rem .8rem;border-left:2px solid var(--warm);
+  font-family:'Noto Serif JP',serif;letter-spacing:.03em;
 }
-.note-field input::placeholder,.note-field textarea::placeholder{
-  color:rgba(26,20,16,.17);font-size:.78rem;font-family:'Noto Serif JP',serif;
+
+/* Generate button */
+.btn-row{display:flex;gap:.8rem;margin-bottom:2rem;align-items:center;flex-wrap:wrap}
+.btn{
+  border:none;padding:.6rem 1.4rem;font-family:'Noto Serif JP',serif;
+  font-size:.82rem;letter-spacing:.1em;cursor:pointer;border-radius:3px;transition:all .2s;
 }
-.note-field input:focus,.note-field textarea:focus{border-bottom-color:var(--accent)}
-.note-field.full{grid-column:1/-1}
-.note-field textarea{min-height:50px}
+.btn-generate{
+  background:linear-gradient(135deg, #8b6f47, #c4956a);
+  color:#f7f3ec;flex:1;min-width:160px;
+  box-shadow:0 2px 8px rgba(139,111,71,.3);
+}
+.btn-generate:hover{opacity:.88;transform:translateY(-1px)}
+.btn-generate:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-outline{background:transparent;color:var(--ink);border:1px solid rgba(26,20,16,.3)}
+.btn-outline:hover{background:rgba(26,20,16,.05)}
+.btn-dl{background:var(--ink);color:var(--cream)}
+.btn-dl:hover{opacity:.78}
+.btn-dl-jpg{background:#3a6b2a;color:var(--cream)}
+.btn-dl-jpg:hover{opacity:.78}
 
-/* Preview card */
-.preview-card{display:none;background:var(--paper-aged);border:1px solid rgba(26,20,16,.14);border-radius:4px;padding:2rem;position:relative;overflow:hidden;margin-bottom:1.4rem}
-.preview-card.visible{display:block}
-.wm{position:absolute;font-family:'Kaisei Decol',serif;font-size:8rem;color:rgba(26,20,16,.02);top:50%;left:50%;transform:translate(-50%,-50%) rotate(-20deg);pointer-events:none;white-space:nowrap;letter-spacing:.1em}
-.preview-inner{display:flex;justify-content:center;position:relative}
-#previewCanvas{display:block;width:100%;max-width:480px;height:auto;border-radius:3px;aspect-ratio:4/5}
-.brush-deco{position:absolute;bottom:-12px;right:-12px;opacity:.05;pointer-events:none}
+/* Progress */
+.progress{display:none;align-items:center;gap:.8rem;color:var(--sepia);font-size:.8rem;letter-spacing:.1em}
+.progress.visible{display:flex}
+.spinner{width:18px;height:18px;border:2px solid rgba(139,111,71,.2);border-top-color:var(--warm);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.progress-steps{display:flex;flex-direction:column;gap:.15rem}
+.step{font-size:.74rem;opacity:.5;transition:opacity .3s}
+.step.active{opacity:1;color:var(--warm)}
+.step.done{opacity:.6}
+.step.done::before{content:'✓ '}
 
-/* Export bar */
-.export-bar{display:none;align-items:center;gap:.85rem;padding:.9rem 1.2rem;background:rgba(26,20,16,.04);border:1px solid rgba(26,20,16,.1);border-radius:3px;margin-bottom:2rem;flex-wrap:wrap}
-.export-bar.visible{display:flex}
-.export-bar > span{font-size:.78rem;color:var(--sepia);letter-spacing:.1em;margin-right:auto}
-.size-select{font-family:'Noto Serif JP',serif;font-size:.76rem;border:1px solid rgba(26,20,16,.25);background:var(--paper);color:var(--ink);padding:.36rem .55rem;border-radius:2px;outline:none;cursor:pointer}
+/* Canvas preview */
+.preview-wrap{display:none;margin-bottom:1.5rem}
+.preview-wrap.visible{display:block}
+.preview-label{font-size:.68rem;letter-spacing:.22em;color:var(--sepia);text-transform:uppercase;margin-bottom:.8rem;display:flex;align-items:center;gap:.7rem}
+.preview-label::after{content:'';flex:1;height:1px;background:rgba(26,20,16,.1)}
+#resultCanvas{
+  display:block;width:100%;max-width:540px;
+  margin:0 auto;border-radius:4px;
+  box-shadow:0 4px 24px rgba(26,20,16,.12);
+}
 
-/* GitHub */
-.github-bar{margin-top:2.5rem;text-align:center;padding-top:1.4rem;border-top:1px solid rgba(26,20,16,.1)}
-.github-bar a{display:inline-flex;align-items:center;gap:.5rem;color:var(--ink);text-decoration:none;font-size:.78rem;letter-spacing:.1em;border-bottom:1px solid rgba(26,20,16,.27);padding-bottom:2px;transition:opacity .2s}
-.github-bar a:hover{opacity:.55}
+/* Photo preview thumbnail */
+.thumb-wrap{display:none;margin-bottom:1.2rem}
+.thumb-wrap.visible{display:flex;align-items:center;gap:.8rem}
+#thumbImg{width:72px;height:72px;object-fit:cover;border-radius:4px;border:1px solid rgba(26,20,16,.12)}
+.thumb-info{font-size:.8rem;color:var(--sepia)}
+.thumb-info strong{display:block;color:var(--ink);font-size:.85rem;margin-bottom:.2rem}
 
 /* Toast */
-.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:.62rem 1.5rem;border-radius:2px;font-size:.79rem;letter-spacing:.1em;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;z-index:999}
+.toast{
+  position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:var(--cream);padding:.6rem 1.5rem;
+  border-radius:2px;font-size:.8rem;letter-spacing:.1em;
+  opacity:0;transition:all .3s;pointer-events:none;z-index:99;
+}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* Spinner */
-.spinner-overlay{display:none;position:fixed;inset:0;background:rgba(247,243,236,.82);z-index:998;align-items:center;justify-content:center;flex-direction:column;gap:1rem}
-.spinner-overlay.visible{display:flex}
-.spinner{width:34px;height:34px;border:2px solid rgba(26,20,16,.13);border-top-color:var(--ink);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.spinner-overlay p{font-size:.79rem;color:var(--sepia);letter-spacing:.12em}
+/* GitHub */
+.github-bar{margin-top:3rem;text-align:center;padding-top:1.4rem;border-top:1px solid rgba(26,20,16,.08)}
+.github-bar a{display:inline-flex;align-items:center;gap:.45rem;color:var(--sepia);text-decoration:none;font-size:.78rem;letter-spacing:.1em;border-bottom:1px solid rgba(139,111,71,.3);padding-bottom:1px;transition:opacity .2s}
+.github-bar a:hover{opacity:.6}
 
-@media(max-width:700px){
-  .main-section{flex-direction:column}
-  .bottle-panel{flex:none}
-  .note-grid{grid-template-columns:1fr}
-  .preview-inner{grid-template-columns:1fr;grid-template-rows:auto auto auto auto}
-  
-  .preview-bottle{grid-column:1;grid-row:3;width:100%;height:220px;margin:0 auto}
-  #previewCanvas{width:100%;height:220px}
-  
-  
+@media(max-width:600px){
+  .ctrl-grid{grid-template-columns:1fr}
+  .btn-row{flex-direction:column}
+  .btn-generate{min-width:auto;width:100%}
 }
 </style>
 </head>
 <body>
-
-<div class="spinner-overlay" id="spinnerOverlay">
-  <div class="spinner"></div>
-  <p id="spinnerMsg">匯出中，請稍候…</p>
-</div>
-<div class="toast" id="toast"></div>
-
-<div class="app-wrapper">
+<div class="app">
 
   <header class="header">
-    <h1>清　酒　手　帖<span></span></h1>
-    <p>SAKE　HANDDRAWN　NOTE</p>
+    <h1>日系手繪筆記</h1>
+    <p>JAPANESE  HANDWRITTEN  NOTE  GENERATOR</p>
   </header>
 
+  <!-- Upload -->
   <div class="upload-zone" id="uploadZone">
     <input type="file" id="fileInput" accept="image/*">
-    <span class="upload-icon">🍶</span>
-    <p>點擊或拖曳上傳清酒瓶照片</p>
-    <small>支援 JPG · PNG · WEBP｜照片僅暫時存於本機，不會上傳伺服器</small>
+    <span class="upload-icon">📷</span>
+    <h3>上傳你的照片</h3>
+    <p>清酒・香氛・商品・食物・生活擺拍皆可<br>支援 JPG · PNG · WEBP</p>
   </div>
 
-  <div class="main-section" id="mainSection">
+  <!-- Thumb preview -->
+  <div class="thumb-wrap" id="thumbWrap">
+    <img id="thumbImg" src="" alt="">
+    <div class="thumb-info">
+      <strong id="thumbName">—</strong>
+      <span id="thumbSize">—</span>
+    </div>
+    <button class="btn btn-outline" onclick="resetUpload()" style="margin-left:auto;font-size:.74rem;padding:.38rem .8rem">重新選擇</button>
+  </div>
 
-    <!-- Bottle canvas -->
-    <div class="bottle-panel">
-      <div class="bottle-canvas-wrap">
-        <canvas id="photoCanvas"  width="270" height="510"></canvas>
-        <canvas id="filterCanvas" width="270" height="510"></canvas>
-        <canvas id="lineCanvas"   width="270" height="510"></canvas>
+  <!-- Controls -->
+  <div class="controls-panel" id="controlsPanel">
+    <div class="ctrl-grid">
+      <div class="ctrl-item">
+        <label>主體類型</label>
+        <select id="subjectType">
+          <option value="清酒">清酒 🍶</option>
+          <option value="香氛蠟燭">香氛蠟燭 🕯️</option>
+          <option value="護膚品">護膚品 🧴</option>
+          <option value="咖啡">咖啡 ☕</option>
+          <option value="甜點">甜點 🍰</option>
+          <option value="花藝">花藝 🌸</option>
+          <option value="文具">文具 ✒️</option>
+          <option value="商品">其他商品 🛍️</option>
+        </select>
+      </div>
+      <div class="ctrl-item">
+        <label>色調氛圍</label>
+        <select id="moodTone">
+          <option value="溫暖奶茶色調、自然生活感">溫暖奶茶 🤎</option>
+          <option value="清新薄荷綠、日式侘寂感">清新薄荷 🌿</option>
+          <option value="浪漫玫瑰粉、少女感">浪漫玫瑰 🌸</option>
+          <option value="沉穩深藍、文青冷冽感">文青深藍 🫧</option>
+          <option value="米白極簡、北歐清冷感">北歐極簡 🤍</option>
+          <option value="暖橘夕陽、復古底片感">復古底片 🎞️</option>
+        </select>
+      </div>
+      <div class="ctrl-item full">
+        <label>手寫文字內容（可自訂，留空自動生成）</label>
+        <textarea id="customText" placeholder="例：今日份的小確幸 ✦ 獺祭二割三分 / 口感清雅細膩 / 餘韻悠長&#10;留空則由 AI 根據照片自動填寫"></textarea>
+      </div>
+      <div class="ctrl-item full">
+        <label>附加說明（可留空）</label>
+        <input type="text" id="extraNote" placeholder="例：這是送給朋友的生日禮物 / 強調天然成分 / 加入日文假名">
       </div>
     </div>
 
-    <!-- Notes -->
-    <div class="notes-panel">
-
-      <div class="section-label">線稿設定</div>
-
-      <div class="ctrl-row">
-        <label title="調整背景去除的敏感度">偵測靈敏度</label>
-        <input type="range" id="traceSlider" min="0" max="100" value="62">
-        <span id="traceVal">62</span>
-        <label style="margin-left:.5rem">底圖透明度</label>
-        <input type="range" id="opacitySlider" min="5" max="60" value="20">
-        <span id="opacityVal">20</span>%
-      </div>
-
-      <!-- Background removal controls -->
-      <div class="ctrl-row">
-        <label title="容差越高，越多背景被去除；若瓶身被誤切，請降低容差">背景容差</label>
-        <input type="range" id="maskTop" min="0" max="100" value="62">
-        <span id="maskTopVal">62</span>
-        <label style="margin-left:.6rem" title="線稿向外擴張距離（px）">外擴距離</label>
-        <input type="range" id="expandSlider" min="0" max="30" value="10">
-        <span id="expandVal">10</span>px
-        <!-- hidden but kept to avoid JS errors -->
-        <input type="range" id="maskBot" min="0" max="85" value="22" style="display:none">
-        <input type="range" id="marginSlider" min="3" max="30" value="10" style="display:none">
-      </div>
-
-      <!-- Line color + thickness -->
-      <div class="tone-row">
-        <label>線條顏色</label>
-        <div class="tone-pill active" data-color="#1a1410" style="background:#1a1410" title="墨黑" onclick="setTone(this,'#1a1410')"></div>
-        <div class="tone-pill" data-color="#3d2b1f" style="background:#3d2b1f" title="深茶" onclick="setTone(this,'#3d2b1f')"></div>
-        <div class="tone-pill" data-color="#5a3e28" style="background:#5a3e28" title="棕褐" onclick="setTone(this,'#5a3e28')"></div>
-        <div class="tone-pill" data-color="#6b4226" style="background:#6b4226" title="赤茶" onclick="setTone(this,'#6b4226')"></div>
-        <div class="tone-pill" data-color="#2c4a2e" style="background:#2c4a2e" title="苔綠" onclick="setTone(this,'#2c4a2e')"></div>
-        <div class="tone-pill" data-color="#1e3a5f" style="background:#1e3a5f" title="藏青" onclick="setTone(this,'#1e3a5f')"></div>
-        <div class="tone-pill" data-color="#8b2020" style="background:#8b2020" title="辰砂" onclick="setTone(this,'#8b2020')"></div>
-        <div class="tone-pill" data-color="#f5f0e8" style="background:#f5f0e8;border:1px solid #bbb" title="白稿" onclick="setTone(this,'#f5f0e8')"></div>
-        <label style="margin-left:.4rem">自訂</label>
-        <input type="color" id="lineColorPicker" value="#1a1410"
-          style="width:21px;height:21px;border:1px solid rgba(26,20,16,.25);border-radius:50%;padding:0;cursor:pointer;background:none;outline:none;-webkit-appearance:none;overflow:hidden;flex-shrink:0"
-          oninput="setCustomLineColor(this.value)" onchange="setCustomLineColor(this.value)">
-        <label style="margin-left:.7rem">粗細</label>
-        <input type="range" id="lineWidthSlider" min="1" max="8" step="0.5" value="1.5" style="width:70px;accent-color:var(--ink)">
-        <span style="font-size:.73rem;color:var(--ink);min-width:22px" id="lineWidthVal">1.5</span>
-      </div>
-
-      <!-- Filter panel -->
-      <div class="filter-row">
-        <label>濾鏡</label>
-        <div class="filter-chips">
-          <span class="fchip active" data-mode="none" onclick="setFilter(this,'none')">無</span>
-          <span class="fchip fc-dark" data-mode="dark" onclick="setFilter(this,'dark')">深色</span>
-          <span class="fchip fc-light" data-mode="light" onclick="setFilter(this,'light')">淺色</span>
-          <span class="fchip fc-warm" data-mode="warm" onclick="setFilter(this,'warm')">暖調</span>
-          <span class="fchip fc-cool" data-mode="cool" onclick="setFilter(this,'cool')">冷調</span>
-          <span class="fchip fc-sepia" data-mode="sepia" onclick="setFilter(this,'sepia')">褪色</span>
-          <span class="fchip fc-custom" data-mode="custom" onclick="setFilter(this,'custom')">自訂</span>
-        </div>
-        <input type="color" id="filterColorPicker" value="#ede8dc"
-          style="width:21px;height:21px;border:1px solid rgba(26,20,16,.25);border-radius:50%;padding:0;cursor:pointer;background:none;outline:none;-webkit-appearance:none;overflow:hidden;flex-shrink:0;display:none"
-          oninput="applyFilter()" onchange="applyFilter()">
-        <label style="margin-left:.7rem">透明度</label>
-        <input type="range" id="filterOpacity" min="0" max="95" value="35" style="width:80px;accent-color:var(--ink)">
-        <span style="font-size:.73rem;color:var(--ink);min-width:26px" id="filterOpacityVal">35</span>%
-      </div>
-
-      <div class="btn-row">
-        <button class="btn" onclick="traceBottle()">✦ 重新繪製線稿</button>
-        <button class="btn outline" onclick="clearLine()">清除線稿</button>
-        <button class="btn accent" onclick="showPreview()">生成介紹卡</button>
-        <button class="btn outline" onclick="resetAll()">重新上傳</button>
-      </div>
-
-      <div class="section-label">清酒筆記</div>
-      <div class="notes-paper">
-        <div class="sake-stamp"><span class="sm">清酒</span><span>SAKE</span><span>品評</span></div>
-        <div class="note-title" id="noteTitle">清酒名稱</div>
-        <div class="note-grid">
-
-          <!-- 酒名 -->
-          <div class="note-field">
-            <div class="field-head">
-              <label>酒名 <span class="ja">銘柄</span></label>
-              <div class="fstyle">
-                <input type="color" value="#1a1410" title="文字顏色"
-                  oninput="applyStyle('f_name',this.value,null)"
-                  onchange="applyStyle('f_name',this.value,null)">
-                <select title="字級" onchange="applyStyle('f_name',null,this.value)">
-                  <option value="0.88rem">小</option>
-                  <option value="1.05rem" selected>中</option>
-                  <option value="1.28rem">大</option>
-                  <option value="1.55rem">特大</option>
-                </select>
-              </div>
-            </div>
-            <input id="f_name" type="text" placeholder="例：獺祭 二割三分"
-              style="font-size:1.05rem;color:#1a1410" oninput="liveTitle(); syncPreviewText()">
-          </div>
-
-          <!-- 酒造 -->
-          <div class="note-field">
-            <div class="field-head">
-              <label>酒造 <span class="ja">蔵元</span></label>
-              <div class="fstyle">
-                <input type="color" value="#1a1410" title="文字顏色"
-                  oninput="applyStyle('f_brewery',this.value,null)"
-                  onchange="applyStyle('f_brewery',this.value,null)">
-                <select title="字級" onchange="applyStyle('f_brewery',null,this.value)">
-                  <option value="0.88rem">小</option>
-                  <option value="1.05rem" selected>中</option>
-                  <option value="1.28rem">大</option>
-                  <option value="1.55rem">特大</option>
-                </select>
-              </div>
-            </div>
-            <input id="f_brewery" type="text" placeholder="例：旭酒造"
-              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()" oninput="syncPreviewText()">
-          </div>
-
-          <!-- 產地 -->
-          <div class="note-field">
-            <div class="field-head">
-              <label>產地 <span class="ja">産地</span></label>
-              <div class="fstyle">
-                <input type="color" value="#1a1410" title="文字顏色"
-                  oninput="applyStyle('f_origin',this.value,null)"
-                  onchange="applyStyle('f_origin',this.value,null)">
-                <select title="字級" onchange="applyStyle('f_origin',null,this.value)">
-                  <option value="0.88rem">小</option>
-                  <option value="1.05rem" selected>中</option>
-                  <option value="1.28rem">大</option>
-                  <option value="1.55rem">特大</option>
-                </select>
-              </div>
-            </div>
-            <input id="f_origin" type="text" placeholder="例：山口縣岩國市"
-              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()" oninput="syncPreviewText()">
-          </div>
-
-          <!-- 年份 -->
-          <div class="note-field">
-            <div class="field-head">
-              <label>年份 <span class="ja">年度</span></label>
-              <div class="fstyle">
-                <input type="color" value="#1a1410" title="文字顏色"
-                  oninput="applyStyle('f_year',this.value,null)"
-                  onchange="applyStyle('f_year',this.value,null)">
-                <select title="字級" onchange="applyStyle('f_year',null,this.value)">
-                  <option value="0.88rem">小</option>
-                  <option value="1.05rem" selected>中</option>
-                  <option value="1.28rem">大</option>
-                  <option value="1.55rem">特大</option>
-                </select>
-              </div>
-            </div>
-            <input id="f_year" type="text" placeholder="例：令和六年"
-              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()" oninput="syncPreviewText()">
-          </div>
-
-          <!-- 釀造類別 -->
-          <div class="note-field">
-            <div class="field-head">
-              <label>釀造類別 <span class="ja">種別</span></label>
-              <div class="fstyle">
-                <input type="color" value="#1a1410" title="文字顏色"
-                  oninput="applyStyle('f_type',this.value,null)"
-                  onchange="applyStyle('f_type',this.value,null)">
-                <select title="字級" onchange="applyStyle('f_type',null,this.value)">
-                  <option value="0.88rem">小</option>
-                  <option value="1.05rem" selected>中</option>
-                  <option value="1.28rem">大</option>
-                  <option value="1.55rem">特大</option>
-                </select>
-              </div>
-            </div>
-            <input id="f_type" type="text" placeholder="例：純米大吟釀"
-              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()" oninput="syncPreviewText()">
-          </div>
-
-          <!-- 精米步合 -->
-          <div class="note-field">
-            <div class="field-head">
-              <label>精米步合 <span class="ja">精米歩合</span></label>
-              <div class="fstyle">
-                <input type="color" value="#1a1410" title="文字顏色"
-                  oninput="applyStyle('f_rice',this.value,null)"
-                  onchange="applyStyle('f_rice',this.value,null)">
-                <select title="字級" onchange="applyStyle('f_rice',null,this.value)">
-                  <option value="0.88rem">小</option>
-                  <option value="1.05rem" selected>中</option>
-                  <option value="1.28rem">大</option>
-                  <option value="1.55rem">特大</option>
-                </select>
-              </div>
-            </div>
-            <input id="f_rice" type="text" placeholder="例：23%"
-              style="font-size:1.05rem;color:#1a1410" oninput="syncPreviewText()" oninput="syncPreviewText()">
-          </div>
-
-          <!-- 口感品評 -->
-          <div class="note-field full">
-            <div class="field-head">
-              <label>口感品評 <span class="ja">テイスティング</span></label>
-              <div class="fstyle">
-                <input type="color" value="#1a1410" title="文字顏色"
-                  oninput="applyStyle('f_taste',this.value,null)"
-                  onchange="applyStyle('f_taste',this.value,null)">
-                <select title="字級" onchange="applyStyle('f_taste',null,this.value)">
-                  <option value="0.82rem">小</option>
-                  <option value="1.0rem" selected>中</option>
-                  <option value="1.18rem">大</option>
-                  <option value="1.38rem">特大</option>
-                </select>
-              </div>
-            </div>
-            <textarea id="f_taste" rows="3"
-              placeholder="例：清雅細膩，入口如花香瀰漫，帶梨與白桃果香，酸度優雅，餘韻悠長綿密。"
-              style="font-size:1.0rem;color:#1a1410" oninput="syncPreviewText()"></textarea>
-          </div>
-
-        </div><!-- /note-grid -->
-      </div><!-- /notes-paper -->
-    </div><!-- /notes-panel -->
-  </div><!-- /main-section -->
-
-  <!-- Preview card: single all-in-one canvas -->
-  <div class="preview-card" id="previewCard">
-    <div class="wm">清酒</div>
-    <div class="section-label">介紹卡預覽</div>
-    <div class="preview-inner" id="previewInner">
-      <canvas id="previewCanvas"></canvas>
+    <div class="prompt-section">
+      <h4>將發送給 AI 的生成指令</h4>
+      <div class="prompt-display" id="promptDisplay">選擇主體與色調後將在此顯示…</div>
     </div>
-    <svg class="brush-deco" width="200" height="200" viewBox="0 0 200 200" fill="none">
-      <path d="M20,180 Q60,100 100,80 Q140,60 170,20" stroke="#1a1410" stroke-width="8" stroke-linecap="round" fill="none"/>
-      <path d="M15,185 Q55,105 95,85 Q135,65 165,25" stroke="#1a1410" stroke-width="2" stroke-linecap="round" fill="none"/>
-    </svg>
   </div>
 
-    <!-- Export bar -->
-  <div class="export-bar" id="exportBar">
-    <span>✦ 匯出介紹卡</span>
-    <select class="size-select" id="sizeSelect" style="display:none"></select>
-    <span style="font-size:.76rem;color:var(--sepia);letter-spacing:.06em">1536 × 1920 px　4:5</span>
-    <button class="btn green" onclick="exportPNG()">⬇ PNG</button>
-    <button class="btn blue"  onclick="exportJPG()">⬇ JPG</button>
-    <button class="btn outline" onclick="exportBottleOnly()">🍶 僅線稿 PNG</button>
+  <!-- Generate + export buttons -->
+  <div class="btn-row">
+    <button class="btn btn-generate" id="generateBtn" onclick="generate()" disabled>
+      ✦ 生成手繪筆記風排版
+    </button>
+    <div class="progress" id="progress">
+      <div class="spinner"></div>
+      <div class="progress-steps">
+        <div class="step" id="s1">分析照片內容…</div>
+        <div class="step" id="s2">規劃版面配置…</div>
+        <div class="step" id="s3">繪製手繪元素…</div>
+        <div class="step" id="s4">完成輸出…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="preview-wrap" id="previewWrap">
+    <div class="preview-label">介紹卡預覽 · 1080 × 1350 px · 4:5</div>
+    <canvas id="resultCanvas" width="1080" height="1350"></canvas>
+    <div class="btn-row" style="margin-top:1rem;justify-content:center">
+      <button class="btn btn-dl" onclick="downloadAs('png')">⬇ 下載 PNG</button>
+      <button class="btn btn-dl-jpg" onclick="downloadAs('jpg')">⬇ 下載 JPG</button>
+    </div>
   </div>
 
   <div class="github-bar">
     <a href="https://github.com/" target="_blank">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
       前往 GitHub 部署
     </a>
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
 // ── State ──
+let uploadedFile = null;
 let uploadedImage = null;
-let photoCtx = null, lineCtx = null, filterCtx = null;
-// IW/IH = actual image dimensions used for all processing canvases
-// These are set dynamically when an image is loaded.
-let IW = 270, IH = 510;
-let lineColor = '#1a1410';
-let filterMode = 'none';
-// Alias W/H for backward-compat
-let W = IW, H = IH;
-
-const FILTER_COLORS = {
-  dark:  {r:0,   g:0,   b:0  },
-  light: {r:255, g:250, b:240},
-  warm:  {r:180, g:100, b:30 },
-  cool:  {r:40,  g:90,  b:160},
-  sepia: {r:139, g:111, b:71 },
-};
-
-const FIELDS = ['name','brewery','origin','year','type','rice','taste'];
-
-const fieldStyles = {
-  f_name:    {color:'#1a1410', size:'1.05rem'},
-  f_brewery: {color:'#1a1410', size:'1.05rem'},
-  f_origin:  {color:'#1a1410', size:'1.05rem'},
-  f_year:    {color:'#1a1410', size:'1.05rem'},
-  f_type:    {color:'#1a1410', size:'1.05rem'},
-  f_rice:    {color:'#1a1410', size:'1.05rem'},
-  f_taste:   {color:'#1a1410', size:'1.0rem'},
-};
-
-// ── Helpers ──
-function hexToRgb(hex) {
-  const h = hex.replace('#','');
-  return { r:parseInt(h.slice(0,2),16), g:parseInt(h.slice(2,4),16), b:parseInt(h.slice(4,6),16) };
-}
-
-function getFieldVal(k) {
-  const el = document.getElementById('f_'+k);
-  return el ? el.value.trim() : '';
-}
-
-// ── Per-field style ──
-function applyStyle(id, color, size) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (color !== null) { fieldStyles[id].color = color; el.style.color = color; }
-  if (size  !== null) { fieldStyles[id].size  = size;  el.style.fontSize = size; }
-  syncPreviewText();
-}
-
-// ── Line color: preset pills ──
-function setTone(pill, color) {
-  document.querySelectorAll('.tone-pill').forEach(p => p.classList.remove('active'));
-  pill.classList.add('active');
-  lineColor = color;
-  document.getElementById('lineColorPicker').value = color;
-  traceBottle();
-}
-
-function setCustomLineColor(color) {
-  document.querySelectorAll('.tone-pill').forEach(p => p.classList.remove('active'));
-  lineColor = color;
-  traceBottle();
-}
-
-// ── Filter ──
-function setFilter(chip, mode) {
-  document.querySelectorAll('.fchip').forEach(c => c.classList.remove('active'));
-  chip.classList.add('active');
-  filterMode = mode;
-  document.getElementById('filterColorPicker').style.display = mode === 'custom' ? 'block' : 'none';
-  applyFilter();
-}
-
-function applyFilter() {
-  const fc = document.getElementById('filterCanvas');
-  if (!fc) return;
-  const ctx = fc.getContext('2d');
-  ctx.clearRect(0, 0, IW, IH);
-  if (filterMode === 'none') { renderPreviewCanvas(); return; }
-  const opacity = parseInt(document.getElementById('filterOpacity').value) / 100;
-  let r, g, b;
-  if (filterMode === 'custom') {
-    const rgb = hexToRgb(document.getElementById('filterColorPicker').value);
-    r=rgb.r; g=rgb.g; b=rgb.b;
-  } else {
-    const fc2 = FILTER_COLORS[filterMode];
-    r=fc2.r; g=fc2.g; b=fc2.b;
-  }
-  ctx.globalAlpha = opacity;
-  ctx.fillStyle = `rgb(${r},${g},${b})`;
-  ctx.fillRect(0, 0, IW, IH);
-  ctx.globalAlpha = 1;
-  renderPreviewCanvas();
-}
+let b64Data = null;
+let b64Type = null;
+let lastLayout = null;
 
 // ── Upload ──
 const uploadZone = document.getElementById('uploadZone');
 const fileInput  = document.getElementById('fileInput');
-uploadZone.addEventListener('click', () => fileInput.click());
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragging'); });
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragging'));
-uploadZone.addEventListener('drop', e => {
-  e.preventDefault(); uploadZone.classList.remove('dragging');
-  const f = e.dataTransfer.files[0];
-  if (f && f.type.startsWith('image/')) loadFile(f);
-});
-fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
 
-function loadFile(file) {
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) handleFile(f);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  uploadedFile = file;
   const reader = new FileReader();
   reader.onload = ev => {
+    b64Data = ev.target.result.split(',')[1];
+    b64Type = file.type;
+
     const img = new Image();
     img.onload = () => {
       uploadedImage = img;
-
-      // Use image's natural size (capped at 1080px for performance)
-      const maxDim = 1080;
-      const sc0 = Math.min(1, maxDim / Math.max(img.width, img.height));
-      IW = W = Math.round(img.width  * sc0);
-      IH = H = Math.round(img.height * sc0);
-
-      // Resize all three canvases to match
-      ['photoCanvas','filterCanvas','lineCanvas'].forEach(id => {
-        const c = document.getElementById(id);
-        c.width  = IW;
-        c.height = IH;
-        c.style.width  = '270px';   // CSS display size stays small
-        c.style.height = (270 * IH / IW) + 'px';
-      });
-
-      photoCtx  = document.getElementById('photoCanvas').getContext('2d');
-      filterCtx = document.getElementById('filterCanvas').getContext('2d');
-      lineCtx   = document.getElementById('lineCanvas').getContext('2d');
-
-      uploadZone.style.display = 'none';
-      document.getElementById('mainSection').classList.add('visible');
-      drawPhoto();
-      applyFilter();
-      setTimeout(traceBottle, 500);
+      // Show thumb
+      document.getElementById('thumbImg').src = ev.target.result;
+      document.getElementById('thumbName').textContent = file.name;
+      document.getElementById('thumbSize').textContent = `${img.width} × ${img.height} · ${(file.size/1024).toFixed(0)} KB`;
+      document.getElementById('thumbWrap').classList.add('visible');
+      document.getElementById('uploadZone').style.display = 'none';
+      document.getElementById('controlsPanel').classList.add('visible');
+      document.getElementById('generateBtn').disabled = false;
+      updatePromptDisplay();
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-// ── Draw photo background (full image into photoCanvas at IW×IH) ──
-function drawPhoto() {
-  if (!uploadedImage || !photoCtx) return;
-  const op = parseInt(document.getElementById('opacitySlider').value) / 100;
-  photoCtx.clearRect(0, 0, IW, IH);
-  // Draw full photo stretched to fill IW×IH (same aspect ratio since IW/IH derived from image)
-  photoCtx.globalAlpha = op;
-  photoCtx.drawImage(uploadedImage, 0, 0, IW, IH);
-  photoCtx.globalAlpha = 1;
+function resetUpload() {
+  uploadedFile = uploadedImage = b64Data = b64Type = null;
+  document.getElementById('thumbWrap').classList.remove('visible');
+  document.getElementById('uploadZone').style.display = '';
+  document.getElementById('controlsPanel').classList.remove('visible');
+  document.getElementById('generateBtn').disabled = true;
+  document.getElementById('previewWrap').classList.remove('visible');
+  fileInput.value = '';
 }
 
-// ── Trace bottle outline ──
-// Method: flood-fill bg → bottle mask → canvas stroke along contour boundary
-// Smoothness comes from Canvas path stroke (anti-aliased), not pixel painting.
-
-function traceBottle() {
-  if (!uploadedImage || !lineCtx) return;
-
-  const expandPx = Math.max(0, parseInt(document.getElementById('expandSlider').value));
-  const lw       = Math.max(1, parseFloat(document.getElementById('lineWidthSlider').value));
-  const bgTolRaw = parseInt(document.getElementById('traceSlider').value);
-  const bgTol    = (100 - bgTolRaw) * 2.0 + 15;
-  const lc       = hexToRgb(lineColor);
-
-  // ── 1. Draw image to offscreen ──
-  const src = document.createElement('canvas');
-  src.width = IW; src.height = IH;
-  const sc2 = src.getContext('2d');
-  sc2.drawImage(uploadedImage, 0, 0, IW, IH);
-  const pxData = sc2.getImageData(0, 0, IW, IH).data;
-
-  // ── 2. Flood-fill background ──
-  function avgCorner(x0, y0) {
-    let r=0,g=0,b=0;
-    for(let dy=0;dy<3;dy++) for(let dx=0;dx<3;dx++){
-      const i=((Math.min(y0+dy,IH-1))*IW+Math.min(x0+dx,IW-1))*4;
-      r+=pxData[i]; g+=pxData[i+1]; b+=pxData[i+2];
-    }
-    return [r/9,g/9,b/9];
-  }
-  const cs=[avgCorner(0,0),avgCorner(IW-3,0),avgCorner(0,IH-3),avgCorner(IW-3,IH-3)];
-  const bgR=cs.reduce((a,c)=>a+c[0],0)/4;
-  const bgG=cs.reduce((a,c)=>a+c[1],0)/4;
-  const bgB=cs.reduce((a,c)=>a+c[2],0)/4;
-
-  const bgMask  = new Uint8Array(IW*IH);
-  const visited = new Uint8Array(IW*IH);
-  const queue   = [];
-
-  function seed(x,y){
-    const idx=y*IW+x; if(visited[idx])return; visited[idx]=1;
-    const pi=idx*4,dr=pxData[pi]-bgR,dg=pxData[pi+1]-bgG,db=pxData[pi+2]-bgB;
-    if(Math.sqrt(dr*dr+dg*dg+db*db)<=bgTol){bgMask[idx]=1;queue.push(idx);}
-  }
-  for(let x=0;x<IW;x++){seed(x,0);seed(x,IH-1);}
-  for(let y=1;y<IH-1;y++){seed(0,y);seed(IW-1,y);}
-  for(let qi=0;qi<queue.length;qi++){
-    const cur=queue[qi],cx=cur%IW,cy=Math.floor(cur/IW);
-    for(const[nx,ny]of[[cx-1,cy],[cx+1,cy],[cx,cy-1],[cx,cy+1]]){
-      if(nx<0||nx>=IW||ny<0||ny>=IH)continue;
-      const ni=ny*IW+nx; if(visited[ni])continue; visited[ni]=1;
-      const pi=ni*4,dr=pxData[pi]-bgR,dg=pxData[pi+1]-bgG,db=pxData[pi+2]-bgB;
-      if(Math.sqrt(dr*dr+dg*dg+db*db)<=bgTol){bgMask[ni]=1;queue.push(ni);}
-    }
-  }
-
-  // bottle mask: 1 = bottle pixel
-  const bottle = new Uint8Array(IW*IH);
-  for(let i=0;i<IW*IH;i++) bottle[i]=bgMask[i]?0:1;
-
-  // ── 3. Find contour boundary pixels ──
-  // A pixel is a boundary if it's bottle AND has at least one bg neighbour
-  // Then we offset outward by expandPx using per-row silhouette scanning
-
-  // Per-row: find leftmost and rightmost bottle pixel
-  // Then the contour is drawn at (leftmost - expandPx) and (rightmost + expandPx)
-  // Per-column: topmost and bottommost, drawn at (top - expandPx) and (bottom + expandPx)
-  // Draw using Canvas arc/path for smooth anti-aliased lines
-
-  lineCtx.clearRect(0, 0, IW, IH);
-  lineCtx.save();
-  lineCtx.strokeStyle = `rgb(${lc.r},${lc.g},${lc.b})`;
-  lineCtx.lineWidth   = lw;
-  lineCtx.lineCap     = 'round';
-  lineCtx.lineJoin    = 'round';
-  lineCtx.globalAlpha = 0.92;
-
-  // Collect silhouette points: left edge and right edge per row
-  const leftPts  = [];   // [x, y] outward-shifted left boundary
-  const rightPts = [];   // [x, y] outward-shifted right boundary
-  const topPts   = [];
-  const botPts   = [];
-
-  for(let y=0;y<IH;y++){
-    let lx=-1, rx=-1;
-    for(let x=0;x<IW;x++) if(bottle[y*IW+x]){ if(lx<0)lx=x; rx=x; }
-    if(lx>=0){
-      leftPts.push( [Math.max(0, lx - expandPx), y] );
-      rightPts.push([Math.min(IW-1, rx + expandPx), y]);
-    }
-  }
-  for(let x=0;x<IW;x++){
-    let ty=-1, by=-1;
-    for(let y=0;y<IH;y++) if(bottle[y*IW+x]){ if(ty<0)ty=y; by=y; }
-    if(ty>=0){
-      topPts.push([x, Math.max(0, ty - expandPx)]);
-      botPts.push([x, Math.min(IH-1, by + expandPx)]);
-    }
-  }
-
-  // Draw left edge as a smooth polyline
-  function drawPolyline(pts) {
-    if(pts.length < 2) return;
-    lineCtx.beginPath();
-    lineCtx.moveTo(pts[0][0], pts[0][1]);
-    for(let i=1;i<pts.length;i++) lineCtx.lineTo(pts[i][0], pts[i][1]);
-    lineCtx.stroke();
-  }
-
-  drawPolyline(leftPts);
-  drawPolyline(rightPts);
-  drawPolyline(topPts);
-  drawPolyline(botPts);
-
-  lineCtx.restore();
-
-  if(document.getElementById('previewCard').classList.contains('visible')){
-    renderPreviewCanvas();
-  }
+// ── Prompt preview ──
+function updatePromptDisplay() {
+  const subject = document.getElementById('subjectType').value;
+  const mood    = document.getElementById('moodTone').value;
+  const custom  = document.getElementById('customText').value.trim();
+  const extra   = document.getElementById('extraNote').value.trim();
+  const pd = document.getElementById('promptDisplay');
+  pd.textContent =
+    `分析這張${subject}照片，生成日系手繪筆記風排版。` +
+    `色調：${mood}。` +
+    (custom ? `手寫文字內容：「${custom}」。` : `手寫文字由AI根據照片內容自動生成。`) +
+    (extra ? `附加要求：${extra}。` : '') +
+    `回傳 JSON 格式的版面設計指令。`;
 }
-
-function clearLine() { if (lineCtx) lineCtx.clearRect(0, 0, IW, IH); }
-
-// ── Slider listeners ──
-['traceSlider','opacitySlider','maskTop','expandSlider','lineWidthSlider','filterOpacity'].forEach(id => {
-  const valId = {
-    traceSlider:'traceVal', opacitySlider:'opacityVal',
-    maskTop:'maskTopVal', expandSlider:'expandVal',
-    lineWidthSlider:'lineWidthVal', filterOpacity:'filterOpacityVal'
-  }[id];
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.addEventListener('input', function() {
-    if (valId) document.getElementById(valId).textContent = this.value;
-    if (id === 'opacitySlider') drawPhoto();
-    else if (id === 'filterOpacity') applyFilter();
-    else traceBottle();
-  });
+['subjectType','moodTone','customText','extraNote'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updatePromptDisplay);
+  document.getElementById(id).addEventListener('change', updatePromptDisplay);
 });
 
-// ── Live title ──
-function liveTitle() {
-  const v = getFieldVal('name');
-  document.getElementById('noteTitle').textContent = v || '清酒名稱';
-  syncPreviewText();
-}
-
-// ── syncPreviewText: just re-render the all-in-one canvas ──
-function syncPreviewText() {
-  if (document.getElementById('previewCard').classList.contains('visible')) {
-    renderPreviewCanvas();
-  }
-}
-
-// ── All-in-one canvas renderer ──
-// Layout: full 1536×1920 canvas = photo fills entire card
-// Text overlaid directly on photo in left/right zones
-// Line art overlaid on top
-
-const CARD_W = 1536;
-const CARD_H = 1920;
-
-function renderPreviewCanvas(targetCanvas) {
-  const pvc = targetCanvas || document.getElementById('previewCanvas');
-  if (!pvc) return;
-
-  const CW = CARD_W, CH = CARD_H;
-  pvc.width  = CW;
-  pvc.height = CH;
-  const pc = pvc.getContext('2d');
-  const SC = CW / 680;   // scale factor (design base 680px wide)
-
-  // ── 1. Paper background (shows if no photo) ──
-  pc.fillStyle = '#ede8dc';
-  pc.fillRect(0, 0, CW, CH);
-
-  // ── 2. Photo + Line art ──
-  // Both photoCanvas and lineCanvas are IW×IH (image native resolution)
-  // Contain-fit into card: same scale for both → perfect alignment
-
-  let photoDx = 0, photoDy = 0, photoDw = CW, photoDh = CH;
-  if (uploadedImage) {
-    const lcv = document.getElementById('lineCanvas');
-    const imgW = lcv ? lcv.width  : uploadedImage.width;
-    const imgH = lcv ? lcv.height : uploadedImage.height;
-    const sc2 = Math.min(CW / imgW, CH / imgH);
-    photoDw = imgW * sc2;
-    photoDh = imgH * sc2;
-    photoDx = (CW - photoDw) / 2;
-    photoDy = (CH - photoDh) / 2;
-
-    // Draw photo (photoCanvas already has the image at IW×IH)
-    pc.save();
-    pc.globalAlpha = parseInt(document.getElementById('opacitySlider').value) / 100;
-    pc.drawImage(document.getElementById('photoCanvas'), photoDx, photoDy, photoDw, photoDh);
-    pc.globalAlpha = 1;
-    pc.restore();
-  }
-
-  // ── 3. Filter overlay — scaled to photo area ──
-  pc.drawImage(document.getElementById('filterCanvas'), photoDx, photoDy, photoDw, photoDh);
-
-  // ── 4. Line art — same rect as photo → perfect overlap ──
-  pc.drawImage(document.getElementById('lineCanvas'), photoDx, photoDy, photoDw, photoDh);
-
-  // ── 5. Semi-transparent overlay strips for text legibility ──
-  // Strips sit on left and right of the photo, don't overlap the photo centre
-  const stripW   = Math.round(CW * 0.30);
-  const photoL   = Math.round(photoDx);           // left edge of photo
-  const photoR   = Math.round(photoDx + photoDw); // right edge of photo
-  const midX     = CW / 2;
-
-  pc.save();
-  pc.fillStyle = 'rgba(237,232,220,0.62)';
-  // Left strip: from 0 to min(stripW, photoL+20) — covers card left + slight photo overlap
-  pc.fillRect(0, 0, Math.min(stripW, photoL + SC*20), CH);
-  // Right strip
-  pc.fillRect(Math.max(CW - stripW, photoR - SC*20), 0, CW, CH);
-  pc.restore();
-
-  // Subtle horizontal ruled lines on strips
-  pc.save();
-  pc.strokeStyle = 'rgba(26,20,16,0.06)';
-  pc.lineWidth = SC * 0.5;
-  const lineStep = SC * 42;
-  for (let y = lineStep; y < CH; y += lineStep) {
-    pc.beginPath(); pc.moveTo(0, y); pc.lineTo(stripW, y); pc.stroke();
-    pc.beginPath(); pc.moveTo(CW - stripW, y); pc.lineTo(CW, y); pc.stroke();
-  }
-  pc.restore();
-
-  // Left red margin line
-  pc.save();
-  pc.strokeStyle = 'rgba(139,32,32,0.18)';
-  pc.lineWidth = SC * 1;
-  pc.beginPath(); pc.moveTo(SC * 36, SC*60); pc.lineTo(SC * 36, CH - SC*60); pc.stroke();
-  pc.restore();
-
-  // Right red margin line
-  pc.save();
-  pc.strokeStyle = 'rgba(139,32,32,0.18)';
-  pc.lineWidth = SC * 1;
-  pc.beginPath(); pc.moveTo(CW - SC*36, SC*60); pc.lineTo(CW - SC*36, CH - SC*60); pc.stroke();
-  pc.restore();
-
-  // ── 6. Sake name — centred at top, overlaid on photo ──
-  function sizeToPx(sizeStr) { return Math.round(parseFloat(sizeStr) * 16 * SC); }
-
-  const nameVal   = getFieldVal('name') || '—';
-  const nameColor = fieldStyles['f_name'].color || '#1a1410';
-  const nameFZ    = sizeToPx(fieldStyles['f_name'].size) * 1.7;
-  const nameY     = CH * 0.072;
-
-  // Name backing strip
-  pc.save();
-  pc.fillStyle = 'rgba(237,232,220,0.70)';
-  const nBacking = nameFZ * 1.9;
-  pc.fillRect(0, nameY - nBacking * 0.75, CW, nBacking);
-  pc.restore();
-
-  pc.save();
-  pc.font          = `700 ${nameFZ}px 'Kaisei Decol', serif`;
-  pc.fillStyle     = nameColor;
-  pc.textAlign     = 'center';
-  pc.letterSpacing = `${SC * 5}px`;
-  pc.fillText(nameVal, CW / 2, nameY);
-  const nw2 = pc.measureText(nameVal).width + SC * 50;
-  pc.strokeStyle = 'rgba(26,20,16,0.15)';
-  pc.lineWidth   = SC * 0.8;
-  pc.beginPath();
-  pc.moveTo((CW-nw2)/2, nameY + SC*10); pc.lineTo((CW+nw2)/2, nameY + SC*10); pc.stroke();
-  pc.restore();
-
-  // Sub-header
-  pc.save();
-  pc.font          = `400 ${SC*10}px 'Noto Serif JP', serif`;
-  pc.fillStyle     = 'rgba(139,111,71,0.75)';
-  pc.textAlign     = 'center';
-  pc.letterSpacing = `${SC*3.5}px`;
-  pc.fillText('SAKE  HANDDRAWN  NOTE', CW/2, nameY + SC*26);
-  pc.restore();
-
-  // ── 7. Fields overlaid on left/right strips ──
-  const leftFields  = [
-    {key:'origin',  labelZH:'產地', labelJA:'産地'},
-    {key:'year',    labelZH:'年份', labelJA:'年度'},
-    {key:'taste',   labelZH:'口感品評', labelJA:'テイスティング'},
-  ];
-  const rightFields = [
-    {key:'brewery', labelZH:'酒造', labelJA:'蔵元'},
-    {key:'type',    labelZH:'釀造類別', labelJA:'種別'},
-    {key:'rice',    labelZH:'精米步合', labelJA:'精米歩合'},
-  ];
-
-  const textPad    = SC * 48;           // indent from card edge (past red line)
-  const textRight  = CW - SC * 48;     // right column anchor
-  const startY     = CH * 0.18;
-  const fieldGap   = (CH * 0.72) / 3;
-  const labelFZ    = SC * 11.5;
-  const sepOffset  = fieldGap - SC * 22;
-
-  function drawField(field, x, y, align, colW) {
-    const val   = getFieldVal(field.key) || '—';
-    const st    = fieldStyles['f_' + field.key] || {color:'#1a1410', size:'1.05rem'};
-    const valFZ = sizeToPx(st.size);
-
-    pc.save();
-    pc.textAlign = align;
-
-    // Label
-    pc.font          = `400 ${labelFZ}px 'Noto Serif JP', serif`;
-    pc.fillStyle     = 'rgba(139,111,71,0.85)';
-    pc.letterSpacing = `${SC*1.8}px`;
-    pc.fillText(field.labelZH + '  ' + field.labelJA, x, y);
-
-    // Value
-    pc.font          = `400 ${valFZ}px 'Ma Shan Zheng', cursive`;
-    pc.fillStyle     = st.color;
-    pc.letterSpacing = `${SC*0.8}px`;
-
-    if (field.key === 'taste' && val !== '—') {
-      let line = '', lineY = y + valFZ * 1.45, lines = 0;
-      const maxLines = Math.max(2, Math.floor(fieldGap / (valFZ * 1.55)) - 1);
-      for (const ch of val.split('')) {
-        const test = line + ch;
-        if (pc.measureText(test).width > colW && line) {
-          pc.fillText(line, x, lineY);
-          line = ch; lineY += valFZ * 1.55; lines++;
-          if (lines >= maxLines) { pc.fillText(line + '…', x, lineY); line = null; break; }
-        } else { line = test; }
-      }
-      if (line) pc.fillText(line, x, lineY);
-    } else {
-      pc.fillText(val, x, y + valFZ * 1.45);
+// ── Progress steps ──
+let stepTimer = null;
+function startProgress() {
+  const steps = ['s1','s2','s3','s4'];
+  steps.forEach(s => { const el=document.getElementById(s); el.className='step'; });
+  document.getElementById('progress').classList.add('visible');
+  document.getElementById('generateBtn').disabled = true;
+  let idx = 0;
+  stepTimer = setInterval(() => {
+    if (idx > 0) {
+      document.getElementById(steps[idx-1]).classList.remove('active');
+      document.getElementById(steps[idx-1]).classList.add('done');
     }
+    if (idx < steps.length) {
+      document.getElementById(steps[idx]).classList.add('active');
+      idx++;
+    }
+  }, 900);
+}
+function stopProgress() {
+  clearInterval(stepTimer);
+  ['s1','s2','s3','s4'].forEach(s => {
+    const el = document.getElementById(s);
+    el.classList.remove('active'); el.classList.add('done');
+  });
+  setTimeout(() => {
+    document.getElementById('progress').classList.remove('visible');
+    document.getElementById('generateBtn').disabled = false;
+  }, 600);
+}
 
-    // Separator line
-    pc.strokeStyle = 'rgba(26,20,16,0.12)';
-    pc.lineWidth   = SC * 0.6;
-    pc.beginPath();
-    const sepY = y + sepOffset;
-    if (align === 'left')  { pc.moveTo(x, sepY); pc.lineTo(x + colW, sepY); }
-    else                   { pc.moveTo(x - colW, sepY); pc.lineTo(x, sepY); }
-    pc.stroke();
-    pc.restore();
+// ── Main generate ──
+async function generate() {
+  if (!b64Data) return;
+  startProgress();
+
+  const subject = document.getElementById('subjectType').value;
+  const mood    = document.getElementById('moodTone').value;
+  const custom  = document.getElementById('customText').value.trim();
+  const extra   = document.getElementById('extraNote').value.trim();
+
+  // Build prompt for Claude
+  const systemPrompt = `你是一位日系手繪筆記風版面設計師。
+用戶會上傳一張商品照片，你需要分析照片並設計一張「日系手繪筆記風」的 IG 貼文排版（4:5，1080×1350px）。
+
+請以 JSON 格式回傳版面設計資料，格式如下（只回傳 JSON，不要加任何說明）：
+{
+  "bg_color": "#f7f0e6",
+  "photo_position": "center",
+  "photo_scale": 0.65,
+  "photo_x": 0.5,
+  "photo_y": 0.48,
+  "handwritten_texts": [
+    {"text": "文字內容", "x": 0.5, "y": 0.12, "size": 42, "color": "#3d2b1f", "angle": -2, "align": "center"},
+    {"text": "副標題", "x": 0.18, "y": 0.25, "size": 28, "color": "#8b6f47", "angle": -1, "align": "left"}
+  ],
+  "doodles": [
+    {"type": "heart", "x": 0.15, "y": 0.18, "size": 22, "color": "#c4956a", "angle": 0},
+    {"type": "star", "x": 0.85, "y": 0.22, "size": 18, "color": "#8b6f47", "angle": 15},
+    {"type": "arrow", "x": 0.42, "y": 0.30, "size": 30, "color": "#c4956a", "angle": 10},
+    {"type": "cloud_frame", "x": 0.5, "y": 0.85, "size": 160, "color": "#3d2b1f", "angle": 0},
+    {"type": "circle_frame", "x": 0.5, "y": 0.48, "size": 200, "color": "#c4956a", "angle": 0},
+    {"type": "dots", "x": 0.1, "y": 0.6, "size": 8, "color": "#c4956a", "angle": 0},
+    {"type": "wavy_line", "x": 0.5, "y": 0.78, "size": 120, "color": "#8b6f47", "angle": 0}
+  ],
+  "highlight_boxes": [
+    {"x": 0.5, "y": 0.88, "width": 0.45, "height": 0.06, "color": "#c4956a", "text": "重點標示文字", "text_color": "#3d2b1f"}
+  ],
+  "notebook_lines": true,
+  "corner_deco": true
+}
+
+所有座標 x/y 為 0~1 的比例值（0.5=中央）。
+photo_scale 控制照片佔畫布大小（0.5~0.8），photo_x/y 控制照片中心位置。
+handwritten_texts 至少 3 條，要有主標題、副文字、日文小字（平假名/片假名）。
+doodles 至少 6 個，散佈在照片周圍，不要遮住主體。
+highlight_boxes 1~2 個，框住重要資訊。
+整體要有日系手帳感：溫暖、療癒、有質感。`;
+
+  const userPrompt = `請分析這張${subject}照片並生成版面設計。
+色調風格：${mood}。
+${custom ? `手寫文字請包含：「${custom}」` : '手寫文字請根據照片內容自動生成，要有中文主標題、一句日文小字、幾個英文字母裝飾。'}
+${extra ? `額外要求：${extra}` : ''}
+回傳 JSON 格式，不需任何說明文字。`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        system: systemPrompt,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: b64Type, data: b64Data } },
+            { type: 'text', text: userPrompt }
+          ]
+        }]
+      })
+    });
+
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error?.message || 'API error');
+
+    const raw = data.content.find(c => c.type === 'text')?.text || '';
+    // Extract JSON from response
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('未收到有效的版面資料');
+    const layout = JSON.parse(jsonMatch[0]);
+    lastLayout = layout;
+
+    await renderCard(layout);
+    stopProgress();
+    document.getElementById('previewWrap').classList.add('visible');
+    document.getElementById('previewWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    toast('✦ 手繪筆記已生成！');
+
+  } catch (err) {
+    stopProgress();
+    console.error(err);
+    toast('生成失敗：' + err.message);
+  }
+}
+
+// ── Render card onto canvas ──
+async function renderCard(layout) {
+  const canvas = document.getElementById('resultCanvas');
+  const CW = 1080, CH = 1350;
+  canvas.width = CW; canvas.height = CH;
+  const ctx = canvas.getContext('2d');
+
+  // ── Background ──
+  ctx.fillStyle = layout.bg_color || '#f7f0e6';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Subtle paper texture: horizontal lines
+  ctx.save();
+  ctx.strokeStyle = 'rgba(139,111,71,0.07)';
+  ctx.lineWidth = 0.8;
+  for (let y = 60; y < CH; y += 48) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CW, y); ctx.stroke();
+  }
+  ctx.restore();
+
+  // Corner decorations
+  if (layout.corner_deco !== false) {
+    drawCornerDeco(ctx, CW, CH);
   }
 
-  const leftColW  = stripW - textPad - SC * 12;
-  const rightColW = stripW - textPad - SC * 12;
+  // ── Photo ──
+  if (uploadedImage) {
+    const px   = (layout.photo_x || 0.5) * CW;
+    const py   = (layout.photo_y || 0.48) * CH;
+    const scl  = layout.photo_scale || 0.65;
+    const imgS = Math.min(CW, CH) * scl;
+    const rat  = uploadedImage.width / uploadedImage.height;
+    const pw   = rat >= 1 ? imgS : imgS * rat;
+    const ph   = rat < 1  ? imgS : imgS / rat;
 
-  leftFields.forEach((f, i) => {
-    drawField(f, textPad, startY + i * fieldGap, 'left', leftColW);
+    ctx.save();
+    ctx.translate(px, py);
+
+    // Soft shadow
+    ctx.shadowColor = 'rgba(26,20,16,0.15)';
+    ctx.shadowBlur  = 28;
+    ctx.shadowOffsetX = 4; ctx.shadowOffsetY = 6;
+
+    // Rounded-rect clip
+    roundedRect(ctx, -pw/2, -ph/2, pw, ph, 12);
+    ctx.clip();
+    ctx.shadowColor = 'transparent';
+    ctx.drawImage(uploadedImage, -pw/2, -ph/2, pw, ph);
+    ctx.restore();
+
+    // Thin border around photo
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.strokeStyle = 'rgba(139,111,71,0.3)';
+    ctx.lineWidth = 1.5;
+    roundedRect(ctx, -pw/2, -ph/2, pw, ph, 12);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── Doodles ──
+  await document.fonts.ready;
+  (layout.doodles || []).forEach(d => {
+    drawDoodle(ctx, d, CW, CH);
   });
-  rightFields.forEach((f, i) => {
-    drawField(f, textRight, startY + i * fieldGap, 'right', rightColW);
+
+  // ── Handwritten texts ──
+  (layout.handwritten_texts || []).forEach(t => {
+    drawText(ctx, t, CW, CH);
   });
 
-  // ── 8. Bottom credit ──
-  pc.save();
-  pc.font          = `400 ${SC*10}px 'Noto Serif JP', serif`;
-  pc.fillStyle     = 'rgba(139,111,71,0.6)';
-  pc.textAlign     = 'center';
-  pc.letterSpacing = `${SC*3}px`;
-  pc.fillText('清 酒 手 帖', CW/2, CH - SC*30);
-  pc.restore();
+  // ── Highlight boxes ──
+  (layout.highlight_boxes || []).forEach(h => {
+    drawHighlightBox(ctx, h, CW, CH);
+  });
 
-  // ── 9. Sake stamp ──
-  const SR = SC * 28;
-  pc.save();
-  pc.translate(CW - stripW + SC*28, CH * 0.12);
-  pc.rotate(-0.18);
-  pc.strokeStyle = 'rgba(139,32,32,0.42)';
-  pc.lineWidth   = SC * 1.5;
-  pc.beginPath(); pc.arc(0, 0, SR, 0, Math.PI*2); pc.stroke();
-  pc.font      = `700 ${SC*12}px 'Kaisei Decol', serif`;
-  pc.fillStyle = 'rgba(139,32,32,0.46)';
-  pc.textAlign = 'center';
-  pc.fillText('清酒', 0, -SC*3);
-  pc.font = `400 ${SC*7.5}px 'Noto Serif JP', serif`;
-  pc.fillText('SAKE', 0, SC*7);
-  pc.fillText('品評', 0, SC*16);
-  pc.restore();
+  // ── Watermark / stamp ──
+  drawStamp(ctx, CW, CH);
 }
 
-
-// ── Show preview ──
-function showPreview() {
-  document.getElementById('previewCard').classList.add('visible');
-  document.getElementById('exportBar').classList.add('visible');
-  renderPreviewCanvas();
-  document.getElementById('previewCard').scrollIntoView({behavior:'smooth', block:'start'});
+// ── Drawing helpers ──
+function roundedRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
+  ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+  ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r);
+  ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
+  ctx.closePath();
 }
 
-// ── Export helpers ──
-function showSpinner(msg) {
-  document.getElementById('spinnerMsg').textContent = msg || '匯出中…';
-  document.getElementById('spinnerOverlay').classList.add('visible');
+function drawText(ctx, t, CW, CH) {
+  const x = t.x * CW, y = t.y * CH;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate((t.angle || 0) * Math.PI / 180);
+  ctx.font = `400 ${t.size || 32}px 'Ma Shan Zheng', cursive`;
+  ctx.fillStyle = t.color || '#3d2b1f';
+  ctx.textAlign = t.align || 'center';
+  ctx.globalAlpha = 0.92;
+  // Multi-line support
+  const lines = String(t.text).split('\n');
+  lines.forEach((line, i) => {
+    ctx.fillText(line, 0, i * (t.size || 32) * 1.4);
+  });
+  ctx.restore();
 }
-function hideSpinner() { document.getElementById('spinnerOverlay').classList.remove('visible'); }
-function showToast(msg) {
+
+function drawDoodle(ctx, d, CW, CH) {
+  const x = d.x * CW, y = d.y * CH;
+  const sz = d.size || 24;
+  const color = d.color || '#c4956a';
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate((d.angle || 0) * Math.PI / 180);
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = Math.max(1.5, sz * 0.06);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.globalAlpha = 0.75;
+
+  switch (d.type) {
+    case 'heart':
+      ctx.beginPath();
+      ctx.moveTo(0, sz*0.3);
+      ctx.bezierCurveTo(-sz*0.5,-sz*0.1,-sz*0.7, sz*0.4, 0, sz*0.85);
+      ctx.bezierCurveTo( sz*0.7, sz*0.4, sz*0.5,-sz*0.1, 0, sz*0.3);
+      ctx.stroke();
+      break;
+    case 'star':
+      for (let i=0;i<5;i++) {
+        const a1=i*4*Math.PI/5 - Math.PI/2;
+        const a2=(i*4+2)*Math.PI/5 - Math.PI/2;
+        i===0 ? ctx.beginPath()&&ctx.moveTo(Math.cos(a1)*sz,Math.sin(a1)*sz) : ctx.lineTo(Math.cos(a1)*sz,Math.sin(a1)*sz);
+        ctx.lineTo(Math.cos(a2)*sz*0.4, Math.sin(a2)*sz*0.4);
+      }
+      ctx.closePath(); ctx.stroke();
+      break;
+    case 'arrow':
+      ctx.beginPath();
+      ctx.moveTo(-sz/2, 0); ctx.lineTo(sz/2, 0);
+      ctx.moveTo(sz/2-sz*0.25, -sz*0.2); ctx.lineTo(sz/2, 0); ctx.lineTo(sz/2-sz*0.25, sz*0.2);
+      ctx.stroke();
+      break;
+    case 'cloud_frame':
+      // Hand-drawn cloud border
+      ctx.beginPath();
+      const cr = sz * 0.13;
+      for (let a=0;a<=Math.PI*2;a+=0.15) {
+        const jit = 1 + Math.sin(a*7)*0.04 + Math.cos(a*11)*0.03;
+        const rx = Math.cos(a)*(sz/2)*jit, ry = Math.sin(a)*(sz/3)*jit;
+        a===0 ? ctx.moveTo(rx,ry) : ctx.lineTo(rx,ry);
+      }
+      ctx.closePath(); ctx.stroke();
+      break;
+    case 'circle_frame':
+      ctx.beginPath();
+      for (let a=0;a<=Math.PI*2;a+=0.08) {
+        const jit = 1 + (Math.random()-0.5)*0.025;
+        const rx = Math.cos(a)*sz/2*jit, ry = Math.sin(a)*sz/2*jit;
+        a===0 ? ctx.moveTo(rx,ry) : ctx.lineTo(rx,ry);
+      }
+      ctx.closePath(); ctx.stroke();
+      break;
+    case 'dots':
+      for (let i=-2;i<=2;i++) for (let j=-2;j<=2;j++) {
+        ctx.beginPath();
+        ctx.arc(i*sz*1.2, j*sz*1.2, sz*0.25, 0, Math.PI*2);
+        ctx.fill();
+      }
+      break;
+    case 'wavy_line':
+      ctx.beginPath();
+      ctx.moveTo(-sz/2, 0);
+      for (let tx=-sz/2;tx<=sz/2;tx+=4) {
+        ctx.lineTo(tx, Math.sin((tx/(sz/8))*Math.PI)*sz*0.08);
+      }
+      ctx.stroke();
+      break;
+    case 'asterisk':
+      for (let a=0;a<Math.PI;a+=Math.PI/3) {
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a)*sz,Math.sin(a)*sz);
+        ctx.lineTo(Math.cos(a+Math.PI)*sz,Math.sin(a+Math.PI)*sz);
+        ctx.stroke();
+      }
+      break;
+    case 'cross':
+      ctx.beginPath();
+      ctx.moveTo(-sz/2,0); ctx.lineTo(sz/2,0);
+      ctx.moveTo(0,-sz/2); ctx.lineTo(0,sz/2);
+      ctx.stroke();
+      break;
+    default:
+      // fallback: small circle
+      ctx.beginPath(); ctx.arc(0,0,sz/3,0,Math.PI*2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawHighlightBox(ctx, h, CW, CH) {
+  const cx = h.x * CW, cy = h.y * CH;
+  const bw = h.width * CW, bh = h.height * CH;
+  ctx.save();
+  ctx.translate(cx, cy);
+  // Hand-drawn box
+  ctx.strokeStyle = h.color || '#c4956a';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = 0.75;
+  ctx.beginPath();
+  // Slightly wobbly rectangle
+  const hw=bw/2, hh=bh/2, jit=2;
+  ctx.moveTo(-hw+jit, -hh);
+  ctx.lineTo( hw-jit,  -hh+(Math.random()-0.5)*jit);
+  ctx.lineTo( hw,       hh-jit);
+  ctx.lineTo(-hw+jit,   hh+(Math.random()-0.5)*jit);
+  ctx.closePath();
+  ctx.stroke();
+  // Text inside box
+  if (h.text) {
+    ctx.font = `400 ${Math.round(bh*0.55)}px 'Ma Shan Zheng', cursive`;
+    ctx.fillStyle = h.text_color || '#3d2b1f';
+    ctx.textAlign = 'center';
+    ctx.globalAlpha = 0.88;
+    ctx.fillText(h.text, 0, bh*0.18);
+  }
+  ctx.restore();
+}
+
+function drawCornerDeco(ctx, CW, CH) {
+  const corners = [[32,32,0],[CW-32,32,90],[32,CH-32,-90],[CW-32,CH-32,180]];
+  corners.forEach(([x,y,rot]) => {
+    ctx.save();
+    ctx.translate(x,y); ctx.rotate(rot*Math.PI/180);
+    ctx.strokeStyle='rgba(139,111,71,0.35)'; ctx.lineWidth=1.5; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(0,24); ctx.lineTo(0,0); ctx.lineTo(24,0); ctx.stroke();
+    ctx.restore();
+  });
+}
+
+function drawStamp(ctx, CW, CH) {
+  ctx.save();
+  ctx.translate(CW-52, CH-52);
+  ctx.rotate(-0.15);
+  ctx.strokeStyle='rgba(139,32,32,0.3)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(0,0,26,0,Math.PI*2); ctx.stroke();
+  ctx.font=`700 13px 'Kaisei Decol',serif`; ctx.fillStyle='rgba(139,32,32,0.32)';
+  ctx.textAlign='center';
+  ctx.fillText('手繪', 0, -4);
+  ctx.font=`400 8px 'Noto Serif JP',serif`;
+  ctx.fillText('NOTE', 0, 8);
+  ctx.restore();
+}
+
+// ── Download ──
+function downloadAs(fmt) {
+  const canvas = document.getElementById('resultCanvas');
+  if (!canvas.width) return toast('請先生成圖片');
+  const mime = fmt==='jpg' ? 'image/jpeg' : 'image/png';
+  const url  = canvas.toDataURL(mime, 0.93);
+  const name = `handwritten-note.${fmt}`;
+  const a = document.createElement('a');
+  a.href=url; a.download=name; a.click();
+  toast(`✦ 已下載 ${fmt.toUpperCase()}！`);
+}
+
+// ── Toast ──
+function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-async function exportPNG() { await doExport('png'); }
-async function exportJPG() { await doExport('jpg'); }
-
-async function doExport(fmt) {
-  showSpinner(fmt === 'png' ? '正在生成 PNG…' : '正在生成 JPG…');
-  try {
-    await document.fonts.ready;
-
-    // Render full-res 1536×1920 onto an offscreen canvas (keeps preview untouched)
-    const expC = document.createElement('canvas');
-    renderPreviewCanvas(expC);   // uses CARD_W/CARD_H internally
-
-    const mime = fmt === 'jpg' ? 'image/jpeg' : 'image/png';
-    const url  = expC.toDataURL(mime, fmt === 'jpg' ? 0.93 : 1.0);
-    const name = (getFieldVal('name').replace(/\s+/g, '-') || 'sake-note');
-    const a    = document.createElement('a');
-    a.href = url; a.download = `${name}_1536x1920.${fmt}`; a.click();
-    showToast(`✦ 已匯出 1536×1920 ${fmt.toUpperCase()}，品飲愉快！`);
-  } catch(e) {
-    showToast('匯出失敗，請再試一次'); console.error(e);
-  } finally {
-    hideSpinner();
-  }
-}
-
-async function exportBottleOnly() {
-  showSpinner('正在匯出線稿…');
-  try {
-    const lc2 = document.getElementById('lineCanvas');
-    const oc2 = document.createElement('canvas');
-    oc2.width = lc2.width; oc2.height = lc2.height;
-    const ctx = oc2.getContext('2d');
-    ctx.fillStyle = '#f7f3ec';
-    ctx.fillRect(0, 0, oc2.width, oc2.height);
-    ctx.drawImage(lc2, 0, 0);
-    const name = (getFieldVal('name').replace(/\s+/g,'-') || 'sake-bottle');
-    const a = document.createElement('a');
-    a.href = oc2.toDataURL('image/png'); a.download = `${name}-lineart.png`; a.click();
-    showToast('✦ 線稿已匯出！');
-  } catch(e) { showToast('匯出失敗'); }
-  finally { hideSpinner(); }
-}
-
-function resetAll() {
-  uploadedImage = null;
-  document.getElementById('mainSection').classList.remove('visible');
-  document.getElementById('previewCard').classList.remove('visible');
-  document.getElementById('exportBar').classList.remove('visible');
-  uploadZone.style.display = '';
-  fileInput.value = '';
-  FIELDS.forEach(k => {
-    const el = document.getElementById('f_'+k);
-    if (el) el.value = '';
-  });
-  document.getElementById('noteTitle').textContent = '清酒名稱';
-  if (photoCtx)  photoCtx.clearRect(0, 0, W, H);
-  if (filterCtx) filterCtx.clearRect(0, 0, W, H);
-  if (lineCtx)   lineCtx.clearRect(0, 0, W, H);
-  filterMode = 'none';
-  document.querySelectorAll('.fchip').forEach((c,i) => c.classList.toggle('active', i===0));
-  syncPreviewText();
 }
 </script>
 </body>
