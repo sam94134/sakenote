@@ -225,7 +225,7 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
       <div class="section-label">線稿設定</div>
 
       <div class="ctrl-row">
-        <label>輪廓靈敏度</label>
+        <label title="調整背景去除的敏感度">偵測靈敏度</label>
         <input type="range" id="traceSlider" min="0" max="100" value="62">
         <span id="traceVal">62</span>
         <label style="margin-left:.5rem">底圖透明度</label>
@@ -233,20 +233,17 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
         <span id="opacityVal">20</span>%
       </div>
 
-      <!-- Label suppression zone sliders -->
+      <!-- Background removal controls -->
       <div class="ctrl-row">
-        <label title="從瓶頂往下，此範圍內只保留外輪廓">遮罩上緣</label>
-        <input type="range" id="maskTop" min="0" max="85" value="28">
-        <span id="maskTopVal">28</span>%
-        <label style="margin-left:.5rem" title="從瓶底往上，此範圍內只保留外輪廓">遮罩下緣</label>
-        <input type="range" id="maskBot" min="0" max="85" value="22">
-        <span id="maskBotVal">22</span>%
-        <label style="margin-left:.5rem" title="輪廓邊緣保留寬度">邊緣寬</label>
-        <input type="range" id="marginSlider" min="3" max="30" value="10">
-        <span id="marginVal">10</span>px
-        <label style="margin-left:.5rem" title="線稿向外擴張距離（px）">外擴距離</label>
-        <input type="range" id="expandSlider" min="0" max="24" value="10">
+        <label title="容差越高，越多背景被去除；若瓶身被誤切，請降低容差">背景容差</label>
+        <input type="range" id="maskTop" min="0" max="100" value="62">
+        <span id="maskTopVal">62</span>
+        <label style="margin-left:.6rem" title="線稿向外擴張距離（px）">外擴距離</label>
+        <input type="range" id="expandSlider" min="0" max="30" value="10">
         <span id="expandVal">10</span>px
+        <!-- hidden but kept to avoid JS errors -->
+        <input type="range" id="maskBot" min="0" max="85" value="22" style="display:none">
+        <input type="range" id="marginSlider" min="3" max="30" value="10" style="display:none">
       </div>
 
       <!-- Line color + thickness -->
@@ -619,199 +616,214 @@ function drawPhoto() {
 }
 
 // ── Trace bottle outline ──
-// Clean approach:
-// 1. Render photo → grayscale → Gaussian blur (suppresses label text)
-// 2. Sobel edge detection
-// 3. Label-zone mask: in the label area, only keep outer silhouette band
-// 4. Write edgeBin pixels onto an offscreen canvas with lineWidth stroke
-// 5. Outward expand: CSS blur + brightness threshold on a second offscreen canvas
-//    This correctly fattens/offsets the line without any arc-fill artifacts.
+// Strategy: background-removal → bottle mask → contour ring → expand outward
+//
+// 1. Render photo on white canvas
+// 2. Flood-fill from image corners to find background colour → build bottle mask
+//    (any pixel similar to bg colour = background; rest = bottle)
+// 3. Erode mask by `expand` px → subtract from original mask → get contour ring
+// 4. Apply line colour + lineWidth stroke along the ring
+// 5. Labels and text inside bottle are completely ignored — only the silhouette matters
 
 function traceBottle() {
   if (!uploadedImage || !lineCtx) return;
 
-  const threshold  = parseInt(document.getElementById('traceSlider').value);
-  const maskTopPct = parseInt(document.getElementById('maskTop').value) / 100;
-  const maskBotPct = parseInt(document.getElementById('maskBot').value) / 100;
-  const edgeMargin = parseInt(document.getElementById('marginSlider').value);
-  const expand     = parseInt(document.getElementById('expandSlider').value);
-  const lw         = parseFloat(document.getElementById('lineWidthSlider').value);
-  const lc         = hexToRgb(lineColor);
-  const colStr     = `rgb(${lc.r},${lc.g},${lc.b})`;
+  const expand  = parseInt(document.getElementById('expandSlider').value);
+  const lw      = parseFloat(document.getElementById('lineWidthSlider').value);
+  const bgTol   = (100 - parseInt(document.getElementById('traceSlider').value)) * 1.8 + 8;
+  // traceSlider: high value = stricter bg detection (less bg removed)
+  // bgTol range: slider 0→100 maps bgTol 188→8
+  const lc      = hexToRgb(lineColor);
+  const colStr  = `rgb(${lc.r},${lc.g},${lc.b})`;
 
-  // ── Step 1: render photo to offscreen ──
+  // ── 1. Render photo onto white offscreen canvas ──
   const off = document.createElement('canvas');
   off.width = W; off.height = H;
   const oc = off.getContext('2d');
   oc.fillStyle = '#ffffff';
   oc.fillRect(0, 0, W, H);
-  const sc = Math.min(W/uploadedImage.width, H/uploadedImage.height);
-  const dw = uploadedImage.width*sc, dh = uploadedImage.height*sc;
-  oc.drawImage(uploadedImage, (W-dw)/2, (H-dh)/2, dw, dh);
-  const rawData = oc.getImageData(0, 0, W, H).data;
+  const sc2 = Math.min(W/uploadedImage.width, H/uploadedImage.height);
+  const dw2 = uploadedImage.width*sc2, dh2 = uploadedImage.height*sc2;
+  const ox2 = Math.round((W-dw2)/2), oy2 = Math.round((H-dh2)/2);
+  oc.drawImage(uploadedImage, ox2, oy2, dw2, dh2);
+  const imgData = oc.getImageData(0, 0, W, H);
+  const px = imgData.data;
 
-  // ── Step 2: grayscale ──
-  const gray = new Float32Array(W * H);
-  for (let i = 0; i < W*H; i++) {
-    gray[i] = 0.299*rawData[i*4] + 0.587*rawData[i*4+1] + 0.114*rawData[i*4+2];
+  // ── 2. Background removal via flood-fill from all 4 corners ──
+  // Sample background colour from the four corners (average)
+  function sampleCorner(x, y) {
+    const i = (y*W+x)*4;
+    return [px[i], px[i+1], px[i+2]];
+  }
+  const corners = [
+    sampleCorner(0,0), sampleCorner(W-1,0),
+    sampleCorner(0,H-1), sampleCorner(W-1,H-1)
+  ];
+  const bgR = Math.round(corners.reduce((a,c)=>a+c[0],0)/4);
+  const bgG = Math.round(corners.reduce((a,c)=>a+c[1],0)/4);
+  const bgB = Math.round(corners.reduce((a,c)=>a+c[2],0)/4);
+
+  function colourDist(i, r, g, b) {
+    const dr = px[i]-r, dg = px[i+1]-g, db = px[i+2]-b;
+    return Math.sqrt(dr*dr + dg*dg + db*db);
   }
 
-  // ── Step 3: Gaussian blur (3 passes) ──
-  function gaussPass(src) {
-    const dst = new Float32Array(W * H);
-    for (let y = 1; y < H-1; y++) {
-      for (let x = 1; x < W-1; x++) {
-        dst[y*W+x] = (
-          src[(y-1)*W+(x-1)] + 2*src[(y-1)*W+x] + src[(y-1)*W+(x+1)] +
-          2*src[y*W+(x-1)]   + 4*src[y*W+x]     + 2*src[y*W+(x+1)]   +
-          src[(y+1)*W+(x-1)] + 2*src[(y+1)*W+x] + src[(y+1)*W+(x+1)]
-        ) / 16;
+  // BFS flood-fill mask (1 = background, 0 = bottle)
+  const bgMask = new Uint8Array(W * H);   // 1 = bg confirmed
+  const queue  = [];
+  const visited = new Uint8Array(W * H);
+
+  function seed(x, y) {
+    const idx = y*W+x;
+    if (visited[idx]) return;
+    visited[idx] = 1;
+    if (colourDist(idx*4, bgR, bgG, bgB) <= bgTol) {
+      bgMask[idx] = 1; queue.push(idx);
+    }
+  }
+  // Seed all border pixels
+  for (let x = 0; x < W; x++) { seed(x, 0); seed(x, H-1); }
+  for (let y = 1; y < H-1; y++) { seed(0, y); seed(W-1, y); }
+
+  let qi = 0;
+  while (qi < queue.length) {
+    const cur = queue[qi++];
+    const cx = cur % W, cy = Math.floor(cur / W);
+    for (const [nx, ny] of [[cx-1,cy],[cx+1,cy],[cx,cy-1],[cx,cy+1]]) {
+      if (nx<0||nx>=W||ny<0||ny>=H) continue;
+      const ni = ny*W+nx;
+      if (visited[ni]) continue;
+      visited[ni] = 1;
+      if (colourDist(ni*4, bgR, bgG, bgB) <= bgTol) {
+        bgMask[ni] = 1; queue.push(ni);
+      }
+    }
+  }
+
+  // bottle mask = NOT background
+  const bottleMask = new Uint8Array(W * H);
+  for (let i = 0; i < W*H; i++) bottleMask[i] = bgMask[i] ? 0 : 1;
+
+  // ── 3. Morphological operations to get clean contour ring ──
+  // a) Dilate bottleMask by `expand` px → expandedMask
+  // b) Erode bottleMask by 1 px → erodedMask
+  // c) contourMask = expandedMask AND NOT erodedMask
+  //    → only pixels in the ring between (expanded outer) and (eroded inner)
+
+  const R_exp = Math.max(1, expand);
+  const R_ero = Math.max(1, Math.round(lw * 0.5));
+
+  function dilate(src, radius) {
+    const dst = new Uint8Array(W * H);
+    // Per-row min/max scan for efficiency (Manhattan approx then refine)
+    // Use proper circular dilation: for each bottle pixel, mark a circle around it
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (!src[y*W+x]) continue;
+        const y0 = Math.max(0, y-radius), y1 = Math.min(H-1, y+radius);
+        const x0 = Math.max(0, x-radius), x1 = Math.min(W-1, x+radius);
+        for (let dy = y0; dy <= y1; dy++) {
+          const ry = dy-y;
+          const rxMax = Math.round(Math.sqrt(Math.max(0, radius*radius - ry*ry)));
+          const lx2 = Math.max(x0, x-rxMax), rx2 = Math.min(x1, x+rxMax);
+          for (let dx = lx2; dx <= rx2; dx++) dst[dy*W+dx] = 1;
+        }
       }
     }
     return dst;
   }
-  let blurred = gaussPass(gray);
-  blurred = gaussPass(blurred); blurred = gaussPass(blurred);
 
-  // ── Step 4: Sobel ──
-  const edgeMag = new Float32Array(W * H);
-  let maxE = 0;
-  for (let y = 1; y < H-1; y++) {
-    for (let x = 1; x < W-1; x++) {
-      const i = y*W+x;
-      const gx = -blurred[(y-1)*W+(x-1)] - 2*blurred[y*W+(x-1)] - blurred[(y+1)*W+(x-1)]
-                 +blurred[(y-1)*W+(x+1)] + 2*blurred[y*W+(x+1)] + blurred[(y+1)*W+(x+1)];
-      const gy = -blurred[(y-1)*W+(x-1)] - 2*blurred[(y-1)*W+x] - blurred[(y-1)*W+(x+1)]
-                 +blurred[(y+1)*W+(x-1)] + 2*blurred[(y+1)*W+x] + blurred[(y+1)*W+(x+1)];
-      edgeMag[i] = Math.sqrt(gx*gx + gy*gy);
-      if (edgeMag[i] > maxE) maxE = edgeMag[i];
-    }
-  }
-
-  const cut = (threshold / 100) * maxE;
-  const labelTop = Math.floor(H * maskTopPct);
-  const labelBot = Math.floor(H * (1 - maskBotPct));
-
-  // ── Step 5: build edgeBin with label-zone masking ──
-  const edgeBin = new Uint8Array(W * H);
-  for (let y = 1; y < H-1; y++) {
-    // Find outer silhouette boundary for this row
-    let leftSil = -1, rightSil = -1;
-    for (let x = 1; x < W-1; x++) {
-      if (edgeMag[y*W+x] > cut * 0.35) {
-        if (leftSil < 0) leftSil = x;
-        rightSil = x;
-      }
-    }
-    const inLabel = (y >= labelTop && y <= labelBot);
-    for (let x = 1; x < W-1; x++) {
-      if (edgeMag[y*W+x] <= cut) continue;
-      if (inLabel && leftSil >= 0) {
-        if (x > leftSil + edgeMargin && x < rightSil - edgeMargin) continue;
-      }
-      edgeBin[y*W+x] = 1;
-    }
-  }
-
-  // ── Step 6: draw edge pixels onto a tmp canvas as stroked paths ──
-  // Use lineWidth = lw + expand*2 so the stroke naturally expands outward.
-  // Then composite onto lineCtx.
-  const strokeWidth = lw + expand * 2;
-
-  const tmp1 = document.createElement('canvas');
-  tmp1.width = W; tmp1.height = H;
-  const tc1 = tmp1.getContext('2d');
-  tc1.strokeStyle = colStr;
-  tc1.lineWidth   = strokeWidth;
-  tc1.lineCap     = 'round';
-  tc1.lineJoin    = 'round';
-
-  // Collect contour segments per row and draw
-  for (let y = 0; y < H; y++) {
-    let segStart = -1;
-    for (let x = 0; x <= W; x++) {
-      const on = x < W && edgeBin[y*W+x];
-      if (on && segStart < 0) { segStart = x; }
-      else if (!on && segStart >= 0) {
-        tc1.beginPath();
-        tc1.moveTo(segStart, y);
-        tc1.lineTo(x - 1, y);
-        tc1.stroke();
-        segStart = -1;
-      }
-    }
-  }
-  // Also draw vertical segments for continuity
-  for (let x = 0; x < W; x++) {
-    let segStart = -1;
-    for (let y = 0; y <= H; y++) {
-      const on = y < H && edgeBin[y*W+x];
-      if (on && segStart < 0) { segStart = y; }
-      else if (!on && segStart >= 0) {
-        if (y - segStart > 1) {
-          tc1.beginPath();
-          tc1.moveTo(x, segStart);
-          tc1.lineTo(x, y - 1);
-          tc1.stroke();
+  function erode(src, radius) {
+    const dst = new Uint8Array(W * H);
+    for (let y = radius; y < H-radius; y++) {
+      for (let x = radius; x < W-radius; x++) {
+        if (!src[y*W+x]) continue;
+        let allOne = true;
+        outer: for (let dy = -radius; dy <= radius && allOne; dy++) {
+          const rxMax = Math.round(Math.sqrt(Math.max(0, radius*radius - dy*dy)));
+          for (let dx = -rxMax; dx <= rxMax; dx++) {
+            if (!src[(y+dy)*W+(x+dx)]) { allOne = false; break outer; }
+          }
         }
-        segStart = -1;
+        if (allOne) dst[y*W+x] = 1;
       }
     }
+    return dst;
   }
 
-  // ── Step 7: if expand > 0, use CSS blur to diffuse the stroke outward,
-  //    then draw on top of a fresh canvas to get a clean offset ring ──
+  const expanded = dilate(bottleMask, R_exp);
+  const eroded   = erode(bottleMask,  R_ero);
+
+  // contour = expanded outer ring only (NOT eroded interior)
+  const contour = new Uint8Array(W * H);
+  for (let i = 0; i < W*H; i++) {
+    contour[i] = (expanded[i] && !eroded[i]) ? 1 : 0;
+  }
+
+  // ── 4. Draw contour onto lineCanvas ──
   lineCtx.clearRect(0, 0, W, H);
 
-  if (expand > 0) {
-    // Draw blurred (expanded) version first at low alpha
-    lineCtx.save();
-    lineCtx.filter = `blur(${Math.round(expand * 0.7)}px)`;
-    lineCtx.globalAlpha = 0.75;
-    lineCtx.drawImage(tmp1, 0, 0);
+  const outImg = lineCtx.createImageData(W, H);
+  const od = outImg.data;
+
+  for (let i = 0; i < W*H; i++) {
+    if (!contour[i]) continue;
+    // Slight per-pixel brightness variation for hand-drawn feel
+    const jitter = (Math.random()-0.5)*18;
+    od[i*4]   = Math.max(0, Math.min(255, lc.r + jitter));
+    od[i*4+1] = Math.max(0, Math.min(255, lc.g + jitter*0.7));
+    od[i*4+2] = Math.max(0, Math.min(255, lc.b + jitter*0.5));
+    od[i*4+3] = Math.min(255, 210 + (Math.random()-0.5)*30);
+  }
+  lineCtx.putImageData(outImg, 0, 0);
+
+  // ── 5. Thicken with lineWidth stroke if lw > 1 ──
+  if (lw > 1) {
+    const tmp2 = document.createElement('canvas');
+    tmp2.width = W; tmp2.height = H;
+    const tc2 = tmp2.getContext('2d');
+    tc2.drawImage(document.getElementById('lineCanvas'), 0, 0);
+    lineCtx.clearRect(0, 0, W, H);
+    lineCtx.filter = `blur(${(lw-1)*0.4}px)`;
+    lineCtx.drawImage(tmp2, 0, 0);
     lineCtx.filter = 'none';
-    // Draw original on top for crisp core
-    lineCtx.globalAlpha = 0.85;
-    lineCtx.drawImage(tmp1, 0, 0);
-    lineCtx.globalAlpha = 1;
-    lineCtx.restore();
-  } else {
-    lineCtx.globalAlpha = 0.88;
-    lineCtx.drawImage(tmp1, 0, 0);
+    lineCtx.globalAlpha = 0.82;
+    lineCtx.drawImage(tmp2, 0, 0);
     lineCtx.globalAlpha = 1;
   }
 
-  // ── Subtle brush texture ──
+  // ── Subtle hand-drawn brush texture ──
   lineCtx.save();
   lineCtx.globalAlpha = 0.015;
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 40; i++) {
     const x = Math.random()*W, y = Math.random()*H;
-    const l = Math.random()*9+2;
+    const l = Math.random()*8+1;
     lineCtx.beginPath();
     lineCtx.moveTo(x, y);
-    lineCtx.lineTo(x + l*(Math.random()-.5), y + l*(Math.random()-.5));
+    lineCtx.lineTo(x+l*(Math.random()-.5), y+l*(Math.random()-.5));
     lineCtx.strokeStyle = colStr;
     lineCtx.lineWidth = Math.random()*1.2;
     lineCtx.stroke();
   }
   lineCtx.restore();
 
-  // Refresh preview if open
   if (document.getElementById('previewCard').classList.contains('visible')) {
     renderPreviewCanvas();
   }
 }
+
 function clearLine() { if (lineCtx) lineCtx.clearRect(0, 0, W, H); }
 
 // ── Slider listeners ──
-['traceSlider','opacitySlider','maskTop','maskBot','marginSlider','expandSlider','lineWidthSlider','filterOpacity'].forEach(id => {
+['traceSlider','opacitySlider','maskTop','expandSlider','lineWidthSlider','filterOpacity'].forEach(id => {
   const valId = {
     traceSlider:'traceVal', opacitySlider:'opacityVal',
-    maskTop:'maskTopVal', maskBot:'maskBotVal',
-    marginSlider:'marginVal', expandSlider:'expandVal',
+    maskTop:'maskTopVal', expandSlider:'expandVal',
     lineWidthSlider:'lineWidthVal', filterOpacity:'filterOpacityVal'
   }[id];
-  document.getElementById(id).addEventListener('input', function() {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', function() {
     if (valId) document.getElementById(valId).textContent = this.value;
     if (id === 'opacitySlider') drawPhoto();
     else if (id === 'filterOpacity') applyFilter();
