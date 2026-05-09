@@ -710,8 +710,15 @@ function traceBottle() {
   // c) contourMask = expandedMask AND NOT erodedMask
   //    → only pixels in the ring between (expanded outer) and (eroded inner)
 
-  const R_exp = Math.max(1, expand);
-  const R_ero = Math.max(1, Math.round(lw * 0.5));
+  // expand = outward gap from bottle surface
+  // lw     = line thickness
+  // We dilate by (expand + lw) to get a ring that starts at `expand` px outside bottle
+  // Then erode by `expand` to get only the outer ring of thickness ~lw
+  const R_outer = Math.max(1, expand + Math.ceil(lw));   // how far out the ring extends
+  const R_inner = Math.max(0, expand);                    // how far in to cut (= gap distance)
+  // alias for dilate/erode calls
+  const R_exp = R_outer;
+  const R_ero = R_inner;
 
   function dilate(src, radius) {
     const dst = new Uint8Array(W * H);
@@ -751,13 +758,15 @@ function traceBottle() {
     return dst;
   }
 
-  const expanded = dilate(bottleMask, R_exp);
-  const eroded   = erode(bottleMask,  R_ero);
+  const outerRing = dilate(bottleMask, R_exp);    // bottle + gap + line width
+  // inner boundary = bottle dilated by just the gap (pixels inside this = not drawn)
+  const innerFill = R_ero > 0 ? dilate(bottleMask, R_ero) : bottleMask;
 
-  // contour = expanded outer ring only (NOT eroded interior)
+  // contour = pixels in outerRing but NOT in innerFill
+  // = only the ring between `expand` and `expand+lw` px outside bottle
   const contour = new Uint8Array(W * H);
   for (let i = 0; i < W*H; i++) {
-    contour[i] = (expanded[i] && !eroded[i]) ? 1 : 0;
+    contour[i] = (outerRing[i] && !innerFill[i]) ? 1 : 0;
   }
 
   // ── 4. Draw contour onto lineCanvas ──
@@ -846,11 +855,12 @@ function syncPreviewText() {
 }
 
 // ── All-in-one canvas renderer ──
-// Full resolution: 1536 × 1920 (4:5, long edge 1920px)
-// Preview is CSS-scaled to fit screen; export uses full res.
+// Layout: full 1536×1920 canvas = photo fills entire card
+// Text overlaid directly on photo in left/right zones
+// Line art overlaid on top
 
-const CARD_W = 1536;   // 4:5 → width
-const CARD_H = 1920;   // 4:5 → height (long edge)
+const CARD_W = 1536;
+const CARD_H = 1920;
 
 function renderPreviewCanvas(targetCanvas) {
   const pvc = targetCanvas || document.getElementById('previewCanvas');
@@ -860,96 +870,109 @@ function renderPreviewCanvas(targetCanvas) {
   pvc.width  = CW;
   pvc.height = CH;
   const pc = pvc.getContext('2d');
+  const SC = CW / 680;   // scale factor (design base 680px wide)
 
-  // ── Scale factor for UI elements (fonts, strokes, etc.) ──
-  // Everything designed at base 680×850 then scaled up ~2.26×
-  const SC = CW / 680;
-
-  // ── Background: aged paper ──
+  // ── 1. Paper background (shows if no photo) ──
   pc.fillStyle = '#ede8dc';
   pc.fillRect(0, 0, CW, CH);
 
-  // Subtle horizontal lines
-  pc.save();
-  pc.strokeStyle = 'rgba(26,20,16,0.055)';
-  pc.lineWidth = SC * 0.5;
-  const lineStep = SC * 38;
-  for (let y = lineStep; y < CH; y += lineStep) {
-    pc.beginPath(); pc.moveTo(0, y); pc.lineTo(CW, y); pc.stroke();
-  }
-  pc.restore();
-
-  // ── Bottle zone: centred, tall ──
-  const BW = Math.round(CW * 0.30);           // 30% of width
-  const BH = Math.round(CH * 0.78);           // 78% of height
-  const BX = Math.round((CW - BW) / 2);
-  const BY = Math.round(CH * 0.13);           // top margin 13%
-
-  // Light paper bg behind bottle
-  pc.save();
-  pc.fillStyle = 'rgba(247,243,236,0.5)';
-  pc.fillRect(BX, BY, BW, BH);
-  pc.restore();
-
+  // ── 2. Photo: fill entire card ──
   if (uploadedImage) {
-    const s  = Math.min(BW / uploadedImage.width, BH / uploadedImage.height);
-    const dw = uploadedImage.width * s, dh = uploadedImage.height * s;
-    const dx = BX + (BW - dw) / 2, dy = BY + (BH - dh) / 2;
-    pc.save();
+    // Cover-fit: fill entire canvas, centred
+    const sc2 = Math.max(CW / uploadedImage.width, CH / uploadedImage.height);
+    const dw2 = uploadedImage.width * sc2, dh2 = uploadedImage.height * sc2;
+    const dx2 = (CW - dw2) / 2, dy2 = (CH - dh2) / 2;
     pc.globalAlpha = parseInt(document.getElementById('opacitySlider').value) / 100;
-    pc.drawImage(uploadedImage, dx, dy, dw, dh);
+    pc.drawImage(uploadedImage, dx2, dy2, dw2, dh2);
     pc.globalAlpha = 1;
-    pc.restore();
-    // Filter overlay
-    pc.drawImage(document.getElementById('filterCanvas'), BX, BY, BW, BH);
-    // Line art
-    pc.drawImage(document.getElementById('lineCanvas'), BX, BY, BW, BH);
   }
 
-  // Bottle zone border
+  // ── 3. Filter overlay (full card) ──
+  pc.drawImage(document.getElementById('filterCanvas'), 0, 0, CW, CH);
+
+  // ── 4. Line art: centred bottle zone ──
+  // Line art is on a 270×510 canvas; place it centred in the card
+  const LAW = Math.round(CW * 0.38);
+  const LAH = Math.round(CH * 0.72);
+  const LAX = Math.round((CW - LAW) / 2);
+  const LAY = Math.round(CH * 0.14);
+  pc.drawImage(document.getElementById('lineCanvas'), LAX, LAY, LAW, LAH);
+
+  // ── 5. Semi-transparent overlay strips for text legibility ──
+  // Left strip
+  const stripW = Math.round(CW * 0.32);
+  const stripPad = SC * 20;
+  // Left
   pc.save();
-  pc.strokeStyle = 'rgba(26,20,16,0.14)';
-  pc.lineWidth = SC * 1;
-  pc.strokeRect(BX, BY, BW, BH);
+  pc.fillStyle = 'rgba(237,232,220,0.55)';
+  pc.fillRect(0, 0, stripW, CH);
+  // Right
+  pc.fillRect(CW - stripW, 0, stripW, CH);
   pc.restore();
 
-  // ── Helper: rem → px scaled ──
-  function sizeToPx(sizeStr) {
-    const rem = parseFloat(sizeStr);
-    return Math.round(rem * 16 * SC);
+  // Subtle horizontal ruled lines on strips
+  pc.save();
+  pc.strokeStyle = 'rgba(26,20,16,0.06)';
+  pc.lineWidth = SC * 0.5;
+  const lineStep = SC * 42;
+  for (let y = lineStep; y < CH; y += lineStep) {
+    pc.beginPath(); pc.moveTo(0, y); pc.lineTo(stripW, y); pc.stroke();
+    pc.beginPath(); pc.moveTo(CW - stripW, y); pc.lineTo(CW, y); pc.stroke();
   }
+  pc.restore();
 
-  // ── Sake name — top centre ──
+  // Left red margin line
+  pc.save();
+  pc.strokeStyle = 'rgba(139,32,32,0.18)';
+  pc.lineWidth = SC * 1;
+  pc.beginPath(); pc.moveTo(SC * 36, SC*60); pc.lineTo(SC * 36, CH - SC*60); pc.stroke();
+  pc.restore();
+
+  // Right red margin line
+  pc.save();
+  pc.strokeStyle = 'rgba(139,32,32,0.18)';
+  pc.lineWidth = SC * 1;
+  pc.beginPath(); pc.moveTo(CW - SC*36, SC*60); pc.lineTo(CW - SC*36, CH - SC*60); pc.stroke();
+  pc.restore();
+
+  // ── 6. Sake name — centred at top, overlaid on photo ──
+  function sizeToPx(sizeStr) { return Math.round(parseFloat(sizeStr) * 16 * SC); }
+
   const nameVal   = getFieldVal('name') || '—';
   const nameColor = fieldStyles['f_name'].color || '#1a1410';
-  const nameFZ    = sizeToPx(fieldStyles['f_name'].size) * 1.8;  // bigger for heading
+  const nameFZ    = sizeToPx(fieldStyles['f_name'].size) * 1.7;
+  const nameY     = CH * 0.072;
+
+  // Name backing strip
   pc.save();
-  pc.font      = `700 ${nameFZ}px 'Kaisei Decol', serif`;
-  pc.fillStyle = nameColor;
-  pc.textAlign = 'center';
-  pc.letterSpacing = `${SC * 6}px`;
-  const nameY  = BY * 0.52;
+  pc.fillStyle = 'rgba(237,232,220,0.70)';
+  const nBacking = nameFZ * 1.9;
+  pc.fillRect(0, nameY - nBacking * 0.75, CW, nBacking);
+  pc.restore();
+
+  pc.save();
+  pc.font          = `700 ${nameFZ}px 'Kaisei Decol', serif`;
+  pc.fillStyle     = nameColor;
+  pc.textAlign     = 'center';
+  pc.letterSpacing = `${SC * 5}px`;
   pc.fillText(nameVal, CW / 2, nameY);
-  // Decorative underline
-  const nw2 = pc.measureText(nameVal).width + SC * 60;
-  pc.strokeStyle = 'rgba(26,20,16,0.14)';
-  pc.lineWidth = SC * 0.8;
+  const nw2 = pc.measureText(nameVal).width + SC * 50;
+  pc.strokeStyle = 'rgba(26,20,16,0.15)';
+  pc.lineWidth   = SC * 0.8;
   pc.beginPath();
-  pc.moveTo((CW - nw2)/2, nameY + SC*8);
-  pc.lineTo((CW + nw2)/2, nameY + SC*8);
-  pc.stroke();
+  pc.moveTo((CW-nw2)/2, nameY + SC*10); pc.lineTo((CW+nw2)/2, nameY + SC*10); pc.stroke();
   pc.restore();
 
-  // ── Sub-header: SAKE HANDDRAWN NOTE ──
+  // Sub-header
   pc.save();
-  pc.font      = `400 ${SC*11}px 'Noto Serif JP', serif`;
-  pc.fillStyle = 'rgba(139,111,71,0.7)';
-  pc.textAlign = 'center';
-  pc.letterSpacing = `${SC*4}px`;
-  pc.fillText('SAKE  HANDDRAWN  NOTE', CW/2, BY * 0.78);
+  pc.font          = `400 ${SC*10}px 'Noto Serif JP', serif`;
+  pc.fillStyle     = 'rgba(139,111,71,0.75)';
+  pc.textAlign     = 'center';
+  pc.letterSpacing = `${SC*3.5}px`;
+  pc.fillText('SAKE  HANDDRAWN  NOTE', CW/2, nameY + SC*26);
   pc.restore();
 
-  // ── Field layout ──
+  // ── 7. Fields overlaid on left/right strips ──
   const leftFields  = [
     {key:'origin',  labelZH:'產地', labelJA:'産地'},
     {key:'year',    labelZH:'年份', labelJA:'年度'},
@@ -961,12 +984,12 @@ function renderPreviewCanvas(targetCanvas) {
     {key:'rice',    labelZH:'精米步合', labelJA:'精米歩合'},
   ];
 
-  const SIDE_PAD   = SC * 28;
-  const COL_W      = BX - SIDE_PAD - SC * 18;
-  const startY     = BY + SC * 32;
-  const fieldGap   = (BH - SC * 40) / 3;
-  const labelFZ    = SC * 11;
-  const sepOffset  = fieldGap - SC * 18;
+  const textPad    = SC * 48;           // indent from card edge (past red line)
+  const textRight  = CW - SC * 48;     // right column anchor
+  const startY     = CH * 0.18;
+  const fieldGap   = (CH * 0.72) / 3;
+  const labelFZ    = SC * 11.5;
+  const sepOffset  = fieldGap - SC * 22;
 
   function drawField(field, x, y, align, colW) {
     const val   = getFieldVal(field.key) || '—';
@@ -977,87 +1000,80 @@ function renderPreviewCanvas(targetCanvas) {
     pc.textAlign = align;
 
     // Label
-    pc.font      = `400 ${labelFZ}px 'Noto Serif JP', serif`;
-    pc.fillStyle = '#8b6f47';
-    pc.letterSpacing = `${SC * 2}px`;
+    pc.font          = `400 ${labelFZ}px 'Noto Serif JP', serif`;
+    pc.fillStyle     = 'rgba(139,111,71,0.85)';
+    pc.letterSpacing = `${SC*1.8}px`;
     pc.fillText(field.labelZH + '  ' + field.labelJA, x, y);
 
-    // Value (with word-wrap for taste)
-    pc.font      = `400 ${valFZ}px 'Ma Shan Zheng', cursive`;
-    pc.fillStyle = st.color;
-    pc.letterSpacing = `${SC * 1}px`;
+    // Value
+    pc.font          = `400 ${valFZ}px 'Ma Shan Zheng', cursive`;
+    pc.fillStyle     = st.color;
+    pc.letterSpacing = `${SC*0.8}px`;
 
     if (field.key === 'taste' && val !== '—') {
-      let line = '', lineY = y + valFZ * 1.4, lines = 0;
-      const maxLines = Math.floor(fieldGap / (valFZ * 1.5)) - 1;
+      let line = '', lineY = y + valFZ * 1.45, lines = 0;
+      const maxLines = Math.max(2, Math.floor(fieldGap / (valFZ * 1.55)) - 1);
       for (const ch of val.split('')) {
         const test = line + ch;
         if (pc.measureText(test).width > colW && line) {
           pc.fillText(line, x, lineY);
-          line = ch; lineY += valFZ * 1.5; lines++;
+          line = ch; lineY += valFZ * 1.55; lines++;
           if (lines >= maxLines) { pc.fillText(line + '…', x, lineY); line = null; break; }
         } else { line = test; }
       }
       if (line) pc.fillText(line, x, lineY);
     } else {
-      pc.fillText(val, x, y + valFZ * 1.4);
+      pc.fillText(val, x, y + valFZ * 1.45);
     }
 
-    // Separator
-    pc.strokeStyle = 'rgba(26,20,16,0.1)';
-    pc.lineWidth = SC * 0.6;
+    // Separator line
+    pc.strokeStyle = 'rgba(26,20,16,0.12)';
+    pc.lineWidth   = SC * 0.6;
     pc.beginPath();
     const sepY = y + sepOffset;
-    if (align === 'left') { pc.moveTo(x, sepY); pc.lineTo(x + colW, sepY); }
-    else                  { pc.moveTo(x - colW, sepY); pc.lineTo(x, sepY); }
+    if (align === 'left')  { pc.moveTo(x, sepY); pc.lineTo(x + colW, sepY); }
+    else                   { pc.moveTo(x - colW, sepY); pc.lineTo(x, sepY); }
     pc.stroke();
     pc.restore();
   }
 
+  const leftColW  = stripW - textPad - SC * 12;
+  const rightColW = stripW - textPad - SC * 12;
+
   leftFields.forEach((f, i) => {
-    drawField(f, SIDE_PAD, startY + i * fieldGap, 'left', COL_W);
+    drawField(f, textPad, startY + i * fieldGap, 'left', leftColW);
   });
-  const rightX = BX + BW + SC*18 + COL_W;
   rightFields.forEach((f, i) => {
-    drawField(f, rightX, startY + i * fieldGap, 'right', COL_W);
+    drawField(f, textRight, startY + i * fieldGap, 'right', rightColW);
   });
 
-  // ── Vertical dividers ──
+  // ── 8. Bottom credit ──
   pc.save();
-  pc.strokeStyle = 'rgba(26,20,16,0.1)';
-  pc.lineWidth = SC * 0.7;
-  [[BX - SC*14, BY + SC*12, BY + BH - SC*12],
-   [BX + BW + SC*14, BY + SC*12, BY + BH - SC*12]].forEach(([lx, ly1, ly2]) => {
-    pc.beginPath(); pc.moveTo(lx, ly1); pc.lineTo(lx, ly2); pc.stroke();
-  });
-  pc.restore();
-
-  // ── Bottom credit line ──
-  pc.save();
-  pc.font      = `400 ${SC*10}px 'Noto Serif JP', serif`;
-  pc.fillStyle = 'rgba(139,111,71,0.5)';
-  pc.textAlign = 'center';
+  pc.font          = `400 ${SC*10}px 'Noto Serif JP', serif`;
+  pc.fillStyle     = 'rgba(139,111,71,0.6)';
+  pc.textAlign     = 'center';
   pc.letterSpacing = `${SC*3}px`;
-  pc.fillText('清 酒 手 帖', CW/2, BY + BH + SC*38);
+  pc.fillText('清 酒 手 帖', CW/2, CH - SC*30);
   pc.restore();
 
-  // ── Sake stamp (top-right) ──
-  const SR = SC * 30;
+  // ── 9. Sake stamp ──
+  const SR = SC * 28;
   pc.save();
-  pc.translate(CW - SR - SC*18, SR + SC*20);
-  pc.rotate(-0.2);
-  pc.strokeStyle = 'rgba(139,32,32,0.38)';
-  pc.lineWidth = SC * 1.5;
+  pc.translate(CW - stripW + SC*28, CH * 0.12);
+  pc.rotate(-0.18);
+  pc.strokeStyle = 'rgba(139,32,32,0.42)';
+  pc.lineWidth   = SC * 1.5;
   pc.beginPath(); pc.arc(0, 0, SR, 0, Math.PI*2); pc.stroke();
-  pc.font      = `700 ${SC*13}px 'Kaisei Decol', serif`;
-  pc.fillStyle = 'rgba(139,32,32,0.42)';
+  pc.font      = `700 ${SC*12}px 'Kaisei Decol', serif`;
+  pc.fillStyle = 'rgba(139,32,32,0.46)';
   pc.textAlign = 'center';
-  pc.fillText('清酒', 0, -SC*4);
-  pc.font = `400 ${SC*8}px 'Noto Serif JP', serif`;
-  pc.fillText('SAKE',  0,  SC*6);
-  pc.fillText('品評',  0,  SC*16);
+  pc.fillText('清酒', 0, -SC*3);
+  pc.font = `400 ${SC*7.5}px 'Noto Serif JP', serif`;
+  pc.fillText('SAKE', 0, SC*7);
+  pc.fillText('品評', 0, SC*16);
   pc.restore();
 }
+
 
 // ── Show preview ──
 function showPreview() {
