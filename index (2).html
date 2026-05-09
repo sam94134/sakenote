@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>清酒手帖 · Sake Handdrawn Note</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Noto+Serif+JP:wght@300;400;700&family=Ma+Shan+Zheng&family=Liu+Jian+Mao+Cao&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --ink:#1a1410;
+  --ink-light:#3d2e22;
+  --paper:#f7f3ec;
+  --paper-aged:#ede8dc;
+  --sepia:#8b6f47;
+  --accent:#8b2020;
+  --line:rgba(26,20,16,0.18);
+}
+
+body{
+  background:var(--paper);
+  font-family:'Noto Serif JP',serif;
+  min-height:100vh;
+  color:var(--ink);
+}
+
+.app-wrapper{
+  max-width:980px;
+  margin:0 auto;
+  padding:2.5rem 1.5rem 5rem;
+}
+
+/* ── Header ── */
+.header{
+  text-align:center;
+  margin-bottom:2.8rem;
+}
+.header h1{
+  font-family:'Kaisei Decol',serif;
+  font-size:2.6rem;
+  font-weight:700;
+  letter-spacing:0.28em;
+  color:var(--ink);
+}
+.header h1 span{
+  display:block;
+  width:55%;
+  margin:0.45rem auto 0;
+  height:1.5px;
+  background:var(--ink);
+  opacity:0.2;
+}
+.header p{
+  font-size:0.78rem;
+  letter-spacing:0.22em;
+  color:var(--sepia);
+  margin-top:0.55rem;
+}
+
+/* ── Upload ── */
+.upload-zone{
+  border:1.5px dashed var(--sepia);
+  border-radius:4px;
+  padding:3rem 2rem;
+  text-align:center;
+  cursor:pointer;
+  transition:background 0.2s;
+  margin-bottom:2.2rem;
+  background:rgba(139,111,71,0.03);
+}
+.upload-zone:hover{background:rgba(139,111,71,0.08)}
+.upload-zone.dragging{background:rgba(139,111,71,0.13);border-style:solid}
+.upload-zone input{display:none}
+.upload-icon{font-size:2.4rem;display:block;margin-bottom:0.8rem}
+.upload-zone p{color:var(--sepia);font-size:0.92rem;letter-spacing:0.08em}
+.upload-zone small{font-size:0.74rem;color:#b09a7e;margin-top:0.3rem;display:block}
+
+/* ── Main section ── */
+.main-section{display:none;gap:2rem;margin-bottom:2.2rem}
+.main-section.visible{display:flex}
+
+/* ── Bottle panel ── */
+.bottle-panel{
+  flex:0 0 270px;
+  background:var(--paper-aged);
+  border:1px solid rgba(26,20,16,0.12);
+  border-radius:3px;
+  overflow:hidden;
+  position:relative;
+}
+.bottle-canvas-wrap{
+  position:relative;
+  width:270px;
+  height:510px;
+}
+#photoCanvas{position:absolute;top:0;left:0;width:270px;height:510px}
+#lineCanvas {position:absolute;top:0;left:0;width:270px;height:510px}
+
+/* ── Notes panel ── */
+.notes-panel{flex:1;display:flex;flex-direction:column;gap:0}
+
+.section-label{
+  font-size:0.68rem;
+  letter-spacing:0.25em;
+  color:var(--sepia);
+  text-transform:uppercase;
+  margin-bottom:0.8rem;
+  display:flex;
+  align-items:center;
+  gap:0.8rem;
+}
+.section-label::after{content:'';flex:1;height:1px;background:rgba(26,20,16,0.12)}
+
+/* Trace controls */
+.trace-row{
+  display:flex;
+  align-items:center;
+  gap:0.7rem;
+  margin-bottom:0.9rem;
+  flex-wrap:wrap;
+}
+.trace-row label{font-size:0.76rem;color:var(--sepia);letter-spacing:0.06em}
+.trace-row input[type=range]{width:100px;accent-color:var(--ink)}
+.trace-row span{font-size:0.76rem;color:var(--ink);min-width:26px}
+
+/* Buttons */
+.btn-row{display:flex;gap:0.7rem;margin-bottom:1rem;flex-wrap:wrap}
+.btn{
+  background:var(--ink);
+  color:var(--paper);
+  border:none;
+  padding:0.52rem 1.1rem;
+  font-family:'Noto Serif JP',serif;
+  font-size:0.78rem;
+  letter-spacing:0.1em;
+  cursor:pointer;
+  border-radius:2px;
+  transition:opacity 0.2s;
+}
+.btn:hover{opacity:0.72}
+.btn.outline{background:transparent;color:var(--ink);border:1px solid rgba(26,20,16,0.35)}
+.btn.accent{background:var(--accent)}
+.btn.green{background:#3a6b2a}
+.btn.blue{background:#1e4a72}
+
+/* Notes paper */
+.notes-paper{
+  background:
+    repeating-linear-gradient(transparent,transparent 37px,rgba(26,20,16,0.07) 37px,rgba(26,20,16,0.07) 38px),
+    var(--paper);
+  border:1px solid rgba(26,20,16,0.12);
+  border-radius:3px;
+  padding:1.5rem 1.5rem 1.5rem 3rem;
+  flex:1;
+  position:relative;
+}
+.notes-paper::before{
+  content:'';
+  position:absolute;
+  left:2.2rem;top:0;bottom:0;
+  width:1px;
+  background:rgba(139,32,32,0.22);
+}
+
+.sake-stamp{
+  width:58px;height:58px;
+  border:2.5px solid var(--accent);
+  border-radius:50%;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  position:absolute;top:1rem;right:1rem;
+  color:var(--accent);
+  font-family:'Kaisei Decol',serif;
+  font-size:0.48rem;letter-spacing:0.1em;
+  text-align:center;
+  opacity:0.5;
+  line-height:1.4;
+  transform:rotate(-12deg);
+}
+.sake-stamp .sm{font-size:0.88rem;font-weight:700}
+
+.note-title{
+  font-family:'Kaisei Decol',serif;
+  font-size:1.45rem;
+  letter-spacing:0.14em;
+  margin-bottom:1.4rem;
+  padding-bottom:0.5rem;
+  border-bottom:1px solid rgba(26,20,16,0.15);
+  font-weight:700;
+}
+
+.note-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1.1rem 1.4rem;
+}
+.note-field label{
+  font-size:0.63rem;
+  letter-spacing:0.18em;
+  color:var(--sepia);
+  text-transform:uppercase;
+  display:block;
+  margin-bottom:0.22rem;
+}
+.note-field .ja{
+  font-size:0.68rem;
+  color:rgba(139,111,71,0.65);
+  margin-left:0.3em;
+}
+.note-field input,
+.note-field textarea{
+  width:100%;
+  background:transparent;
+  border:none;
+  border-bottom:1px solid rgba(26,20,16,0.18);
+  padding:0.22rem 0;
+  font-size:1.05rem;
+  font-family:'Ma Shan Zheng','Liu Jian Mao Cao',cursive;
+  color:var(--ink);
+  outline:none;
+  transition:border-color 0.2s;
+  resize:none;
+  line-height:1.6;
+}
+.note-field input::placeholder,
+.note-field textarea::placeholder{
+  color:rgba(26,20,16,0.18);
+  font-size:0.82rem;
+  font-family:'Noto Serif JP',serif;
+}
+.note-field input:focus,
+.note-field textarea:focus{border-bottom-color:var(--accent)}
+.note-field.full{grid-column:1/-1}
+.note-field textarea{min-height:52px}
+
+/* ── Preview card ── */
+.preview-card{
+  display:none;
+  background:var(--paper-aged);
+  border:1px solid rgba(26,20,16,0.15);
+  border-radius:4px;
+  padding:2.2rem;
+  position:relative;
+  overflow:hidden;
+  margin-bottom:1.5rem;
+}
+.preview-card.visible{display:block}
+
+.wm{
+  position:absolute;
+  font-family:'Kaisei Decol',serif;
+  font-size:8rem;
+  color:rgba(26,20,16,0.022);
+  top:50%;left:50%;
+  transform:translate(-50%,-50%) rotate(-20deg);
+  pointer-events:none;
+  white-space:nowrap;
+  letter-spacing:0.1em;
+}
+
+.preview-inner{display:flex;gap:2.5rem;position:relative}
+
+.preview-bottle{flex:0 0 170px;height:420px;position:relative}
+#previewCanvas{width:170px;height:420px}
+
+.preview-notes{flex:1}
+
+.prev-name{
+  font-family:'Kaisei Decol',serif;
+  font-size:2rem;
+  font-weight:700;
+  letter-spacing:0.15em;
+  margin-bottom:1.3rem;
+  line-height:1.2;
+}
+
+.prev-fields{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1rem 1.5rem;
+}
+.pf{border-bottom:1px solid rgba(26,20,16,0.1);padding-bottom:0.6rem}
+.pf-label{font-size:0.58rem;letter-spacing:0.2em;color:var(--sepia);text-transform:uppercase;margin-bottom:0.12rem}
+.pf-value{
+  font-family:'Ma Shan Zheng',cursive;
+  font-size:1.18rem;
+  color:var(--ink);
+  line-height:1.4;
+}
+.pf.full{grid-column:1/-1}
+
+/* Brush deco SVG */
+.brush-deco{position:absolute;bottom:-12px;right:-12px;opacity:0.05;pointer-events:none}
+
+/* ── Export bar ── */
+.export-bar{
+  display:none;
+  align-items:center;
+  gap:1rem;
+  padding:1rem 1.2rem;
+  background:rgba(26,20,16,0.04);
+  border:1px solid rgba(26,20,16,0.1);
+  border-radius:3px;
+  margin-bottom:2rem;
+}
+.export-bar.visible{display:flex}
+.export-bar span{
+  font-size:0.8rem;
+  color:var(--sepia);
+  letter-spacing:0.1em;
+  margin-right:auto;
+}
+
+/* export size selector */
+.size-select{
+  font-family:'Noto Serif JP',serif;
+  font-size:0.78rem;
+  border:1px solid rgba(26,20,16,0.25);
+  background:var(--paper);
+  color:var(--ink);
+  padding:0.4rem 0.6rem;
+  border-radius:2px;
+  outline:none;
+  cursor:pointer;
+}
+
+/* ── GitHub ── */
+.github-bar{
+  margin-top:2.5rem;
+  text-align:center;
+  padding-top:1.5rem;
+  border-top:1px solid rgba(26,20,16,0.1);
+}
+.github-bar a{
+  display:inline-flex;
+  align-items:center;
+  gap:0.5rem;
+  color:var(--ink);
+  text-decoration:none;
+  font-size:0.8rem;
+  letter-spacing:0.1em;
+  border-bottom:1px solid rgba(26,20,16,0.28);
+  padding-bottom:2px;
+  transition:opacity 0.2s;
+}
+.github-bar a:hover{opacity:0.55}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;
+  bottom:2rem;
+  left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--ink);
+  color:var(--paper);
+  padding:0.7rem 1.6rem;
+  border-radius:2px;
+  font-size:0.82rem;
+  letter-spacing:0.1em;
+  opacity:0;
+  transition:opacity 0.3s,transform 0.3s;
+  pointer-events:none;
+  z-index:999;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Spinner ── */
+.spinner-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(247,243,236,0.8);
+  z-index:998;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:1rem;
+}
+.spinner-overlay.visible{display:flex}
+.spinner{
+  width:36px;height:36px;
+  border:2px solid rgba(26,20,16,0.15);
+  border-top-color:var(--ink);
+  border-radius:50%;
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner-overlay p{font-size:0.82rem;color:var(--sepia);letter-spacing:0.12em}
+
+@media(max-width:680px){
+  .main-section{flex-direction:column}
+  .bottle-panel{flex:none}
+  .note-grid{grid-template-columns:1fr}
+  .preview-inner{flex-direction:column}
+  .preview-bottle{flex:none;height:240px}
+  .prev-fields{grid-template-columns:1fr}
+  .export-bar{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+
+<!-- Spinner -->
+<div class="spinner-overlay" id="spinnerOverlay">
+  <div class="spinner"></div>
+  <p id="spinnerMsg">匯出中，請稍候…</p>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<div class="app-wrapper">
+
+  <!-- Header -->
+  <header class="header">
+    <h1>清　酒　手　帖<span></span></h1>
+    <p>SAKE　HANDDRAWN　NOTE</p>
+  </header>
+
+  <!-- Upload -->
+  <div class="upload-zone" id="uploadZone">
+    <input type="file" id="fileInput" accept="image/*">
+    <span class="upload-icon">🍶</span>
+    <p>點擊或拖曳上傳清酒瓶照片</p>
+    <small>支援 JPG、PNG、WEBP｜照片僅暫時存於本機，不會上傳</small>
+  </div>
+
+  <!-- Main: bottle + notes -->
+  <div class="main-section" id="mainSection">
+
+    <!-- Bottle canvas -->
+    <div class="bottle-panel">
+      <div class="bottle-canvas-wrap">
+        <canvas id="photoCanvas" width="270" height="510"></canvas>
+        <canvas id="lineCanvas"  width="270" height="510"></canvas>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="notes-panel">
+      <div class="section-label">清酒筆記</div>
+
+      <div class="trace-row">
+        <label>線稿強度</label>
+        <input type="range" id="traceSlider" min="0" max="100" value="55">
+        <span id="traceVal">55</span>
+
+        <label style="margin-left:0.8rem">底圖透明度</label>
+        <input type="range" id="opacitySlider" min="5" max="60" value="22">
+        <span id="opacityVal">22</span>%
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" onclick="traceBottle()">✦ 繪製線稿</button>
+        <button class="btn outline" onclick="clearLine()">清除線稿</button>
+        <button class="btn accent" onclick="showPreview()">生成介紹卡</button>
+        <button class="btn outline" onclick="resetAll()">重新上傳</button>
+      </div>
+
+      <div class="notes-paper">
+        <div class="sake-stamp">
+          <span class="sm">清酒</span>
+          <span>SAKE</span>
+          <span>品評</span>
+        </div>
+
+        <div class="note-title" id="noteTitle">清酒名稱</div>
+
+        <div class="note-grid">
+          <div class="note-field">
+            <label>酒名 <span class="ja">銘柄</span></label>
+            <input id="f_name" type="text" placeholder="例：獺祭 二割三分" oninput="liveTitle()">
+          </div>
+          <div class="note-field">
+            <label>酒造 <span class="ja">蔵元</span></label>
+            <input id="f_brewery" type="text" placeholder="例：旭酒造">
+          </div>
+          <div class="note-field">
+            <label>產地 <span class="ja">産地</span></label>
+            <input id="f_origin" type="text" placeholder="例：山口縣岩國市">
+          </div>
+          <div class="note-field">
+            <label>年份 <span class="ja">年度</span></label>
+            <input id="f_year" type="text" placeholder="例：令和六年">
+          </div>
+          <div class="note-field">
+            <label>釀造類別 <span class="ja">種別</span></label>
+            <input id="f_type" type="text" placeholder="例：純米大吟釀">
+          </div>
+          <div class="note-field">
+            <label>精米步合 <span class="ja">精米歩合</span></label>
+            <input id="f_rice" type="text" placeholder="例：23%">
+          </div>
+          <div class="note-field full">
+            <label>口感品評 <span class="ja">テイスティング</span></label>
+            <textarea id="f_taste" rows="3" placeholder="例：清雅細膩，入口如花香瀰漫，帶梨與白桃果香，酸度優雅，餘韻悠長綿密。"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview card -->
+  <div class="preview-card" id="previewCard">
+    <div class="wm">清酒</div>
+    <div class="section-label">介紹卡預覽</div>
+    <div class="preview-inner" id="previewInner">
+      <div class="preview-bottle">
+        <canvas id="previewCanvas" width="170" height="420"></canvas>
+      </div>
+      <div class="preview-notes">
+        <div class="prev-name" id="prev_name">—</div>
+        <div class="prev-fields">
+          <div class="pf">
+            <div class="pf-label">產地 / 産地</div>
+            <div class="pf-value" id="prev_origin">—</div>
+          </div>
+          <div class="pf">
+            <div class="pf-label">酒造 / 蔵元</div>
+            <div class="pf-value" id="prev_brewery">—</div>
+          </div>
+          <div class="pf">
+            <div class="pf-label">年份</div>
+            <div class="pf-value" id="prev_year">—</div>
+          </div>
+          <div class="pf">
+            <div class="pf-label">釀造類別</div>
+            <div class="pf-value" id="prev_type">—</div>
+          </div>
+          <div class="pf">
+            <div class="pf-label">精米步合</div>
+            <div class="pf-value" id="prev_rice">—</div>
+          </div>
+          <div class="pf full">
+            <div class="pf-label">口感品評</div>
+            <div class="pf-value" id="prev_taste">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Brush decoration -->
+    <svg class="brush-deco" width="200" height="200" viewBox="0 0 200 200" fill="none">
+      <path d="M20,180 Q60,100 100,80 Q140,60 170,20" stroke="#1a1410" stroke-width="8" stroke-linecap="round" fill="none"/>
+      <path d="M15,185 Q55,105 95,85 Q135,65 165,25" stroke="#1a1410" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </svg>
+  </div>
+
+  <!-- Export bar -->
+  <div class="export-bar" id="exportBar">
+    <span>✦ 匯出介紹卡</span>
+    <select class="size-select" id="sizeSelect">
+      <option value="1">標準 1×</option>
+      <option value="2" selected>高清 2×</option>
+      <option value="3">超清 3×</option>
+    </select>
+    <button class="btn green" onclick="exportPNG()">⬇ 匯出 PNG</button>
+    <button class="btn blue"  onclick="exportJPG()">⬇ 匯出 JPG</button>
+    <button class="btn outline" onclick="exportBottleOnly()">🍶 僅線稿 PNG</button>
+  </div>
+
+  <!-- GitHub -->
+  <div class="github-bar">
+    <a href="https://github.com/" target="_blank">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      前往 GitHub 部署
+    </a>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let uploadedImage = null;
+let photoCtx = null, lineCtx = null;
+const W = 270, H = 510;
+
+// ── Upload ──
+const uploadZone = document.getElementById('uploadZone');
+const fileInput  = document.getElementById('fileInput');
+
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragging'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragging'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.classList.remove('dragging');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadFile(f);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      uploadedImage = img;
+      photoCtx = document.getElementById('photoCanvas').getContext('2d');
+      lineCtx  = document.getElementById('lineCanvas').getContext('2d');
+      uploadZone.style.display = 'none';
+      document.getElementById('mainSection').classList.add('visible');
+      drawPhoto();
+      setTimeout(traceBottle, 450);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Draw photo (faint background) ──
+function drawPhoto() {
+  if (!uploadedImage || !photoCtx) return;
+  const op = parseInt(document.getElementById('opacitySlider').value) / 100;
+  photoCtx.clearRect(0, 0, W, H);
+  const s  = Math.min(W / uploadedImage.width, H / uploadedImage.height);
+  const dw = uploadedImage.width * s, dh = uploadedImage.height * s;
+  const dx = (W - dw) / 2,            dy = (H - dh) / 2;
+  photoCtx.globalAlpha = op;
+  photoCtx.drawImage(uploadedImage, dx, dy, dw, dh);
+  photoCtx.globalAlpha = 1;
+}
+
+// ── Sobel edge → hand-drawn lines ──
+function traceBottle() {
+  if (!uploadedImage || !lineCtx) return;
+  const threshold = parseInt(document.getElementById('traceSlider').value);
+
+  const off = document.createElement('canvas');
+  off.width = W; off.height = H;
+  const offCtx = off.getContext('2d');
+  const s  = Math.min(W / uploadedImage.width, H / uploadedImage.height);
+  const dw = uploadedImage.width * s, dh = uploadedImage.height * s;
+  offCtx.fillStyle = '#fff';
+  offCtx.fillRect(0, 0, W, H);
+  offCtx.drawImage(uploadedImage, (W-dw)/2, (H-dh)/2, dw, dh);
+
+  const src = offCtx.getImageData(0, 0, W, H).data;
+  const gray = new Float32Array(W * H);
+  for (let i = 0; i < W * H; i++) {
+    gray[i] = 0.299*src[i*4] + 0.587*src[i*4+1] + 0.114*src[i*4+2];
+  }
+
+  const edges = new Float32Array(W * H);
+  let maxE = 0;
+  for (let y = 1; y < H-1; y++) {
+    for (let x = 1; x < W-1; x++) {
+      const i = y*W+x;
+      const gx = -gray[(y-1)*W+(x-1)] - 2*gray[y*W+(x-1)] - gray[(y+1)*W+(x-1)]
+                 +gray[(y-1)*W+(x+1)] + 2*gray[y*W+(x+1)] + gray[(y+1)*W+(x+1)];
+      const gy = -gray[(y-1)*W+(x-1)] - 2*gray[(y-1)*W+x] - gray[(y-1)*W+(x+1)]
+                 +gray[(y+1)*W+(x-1)] + 2*gray[(y+1)*W+x] + gray[(y+1)*W+(x+1)];
+      edges[i] = Math.sqrt(gx*gx + gy*gy);
+      if (edges[i] > maxE) maxE = edges[i];
+    }
+  }
+
+  lineCtx.clearRect(0, 0, W, H);
+  const out = lineCtx.createImageData(W, H);
+  const od  = out.data;
+  const cut = (threshold / 100) * maxE;
+
+  for (let i = 0; i < W * H; i++) {
+    const isEdge = edges[i] > cut;
+    const noise  = (Math.random() - 0.5) * 16;
+    const val    = isEdge ? Math.max(0, 26 + noise) : 255;
+    od[i*4]   = val;
+    od[i*4+1] = val - (isEdge ? 4 : 0);
+    od[i*4+2] = val - (isEdge ? 8 : 0);
+    od[i*4+3] = isEdge ? Math.min(255, 215 + noise) : 0;
+  }
+  lineCtx.putImageData(out, 0, 0);
+  addBrushTexture(lineCtx, W, H);
+}
+
+function addBrushTexture(ctx, w, h) {
+  ctx.save();
+  ctx.globalAlpha = 0.025;
+  for (let i = 0; i < 90; i++) {
+    const x = Math.random()*w, y = Math.random()*h;
+    const l = Math.random()*14+2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + l*(Math.random()-.5), y + l*(Math.random()-.5));
+    ctx.strokeStyle = '#1a1410';
+    ctx.lineWidth = Math.random()*2.2;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function clearLine() {
+  if (lineCtx) lineCtx.clearRect(0, 0, W, H);
+}
+
+// ── Sliders ──
+document.getElementById('traceSlider').addEventListener('input', function() {
+  document.getElementById('traceVal').textContent = this.value;
+  traceBottle();
+});
+document.getElementById('opacitySlider').addEventListener('input', function() {
+  document.getElementById('opacityVal').textContent = this.value;
+  drawPhoto();
+});
+
+// ── Live title ──
+function liveTitle() {
+  const v = document.getElementById('f_name').value.trim();
+  document.getElementById('noteTitle').textContent = v || '清酒名稱';
+}
+
+// ── Preview ──
+function showPreview() {
+  const vals = getFields();
+
+  document.getElementById('prev_name').textContent = vals.name || '—';
+  ['origin','brewery','year','type','rice','taste'].forEach(k => {
+    document.getElementById('prev_'+k).textContent = vals[k] || '—';
+  });
+
+  // Render preview canvas
+  const pvc  = document.getElementById('previewCanvas');
+  const pCtx = pvc.getContext('2d');
+  pCtx.clearRect(0, 0, 170, 420);
+  if (uploadedImage) {
+    const s = Math.min(170/uploadedImage.width, 420/uploadedImage.height);
+    const dw = uploadedImage.width*s, dh = uploadedImage.height*s;
+    pCtx.globalAlpha = 0.14;
+    pCtx.drawImage(uploadedImage, (170-dw)/2, (420-dh)/2, dw, dh);
+    pCtx.globalAlpha = 1;
+  }
+  pCtx.drawImage(document.getElementById('lineCanvas'), 0, 0, 170, 420);
+
+  document.getElementById('previewCard').classList.add('visible');
+  document.getElementById('exportBar').classList.add('visible');
+  document.getElementById('previewCard').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function getFields() {
+  return {
+    name:    document.getElementById('f_name').value.trim(),
+    brewery: document.getElementById('f_brewery').value.trim(),
+    origin:  document.getElementById('f_origin').value.trim(),
+    year:    document.getElementById('f_year').value.trim(),
+    type:    document.getElementById('f_type').value.trim(),
+    rice:    document.getElementById('f_rice').value.trim(),
+    taste:   document.getElementById('f_taste').value.trim(),
+  };
+}
+
+// ── Export ──
+function showSpinner(msg) {
+  document.getElementById('spinnerMsg').textContent = msg || '匯出中，請稍候…';
+  document.getElementById('spinnerOverlay').classList.add('visible');
+}
+function hideSpinner() {
+  document.getElementById('spinnerOverlay').classList.remove('visible');
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+async function exportPNG() {
+  await doExport('png');
+}
+async function exportJPG() {
+  await doExport('jpg');
+}
+
+async function doExport(fmt) {
+  showSpinner(fmt === 'png' ? '正在生成 PNG…' : '正在生成 JPG…');
+  const scale = parseInt(document.getElementById('sizeSelect').value);
+  const target = document.getElementById('previewInner');
+
+  // Hide section-label while exporting
+  const sectionLabel = document.querySelector('.preview-card .section-label');
+  const origDisplay = sectionLabel ? sectionLabel.style.display : '';
+  if (sectionLabel) sectionLabel.style.display = 'none';
+
+  try {
+    await document.fonts.ready;
+    const canvas = await html2canvas(target, {
+      scale: scale,
+      useCORS: true,
+      backgroundColor: '#ede8dc',
+      logging: false,
+    });
+
+    const mime = fmt === 'jpg' ? 'image/jpeg' : 'image/png';
+    const quality = fmt === 'jpg' ? 0.92 : 1.0;
+    const url = canvas.toDataURL(mime, quality);
+
+    const sakeName = document.getElementById('f_name').value.trim().replace(/\s+/g,'-') || 'sake-note';
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${sakeName}.${fmt === 'jpg' ? 'jpg' : 'png'}`;
+    a.click();
+    showToast(`✦ 已匯出 ${fmt.toUpperCase()}，品飲愉快！`);
+  } catch(e) {
+    showToast('匯出失敗，請再試一次');
+    console.error(e);
+  } finally {
+    if (sectionLabel) sectionLabel.style.display = origDisplay;
+    hideSpinner();
+  }
+}
+
+async function exportBottleOnly() {
+  showSpinner('正在匯出線稿…');
+  try {
+    const lc  = document.getElementById('lineCanvas');
+    const offC = document.createElement('canvas');
+    offC.width  = lc.width;
+    offC.height = lc.height;
+    const ctx = offC.getContext('2d');
+    ctx.fillStyle = '#f7f3ec';
+    ctx.fillRect(0, 0, offC.width, offC.height);
+    ctx.drawImage(lc, 0, 0);
+
+    const url = offC.toDataURL('image/png');
+    const sakeName = document.getElementById('f_name').value.trim().replace(/\s+/g,'-') || 'sake-bottle';
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${sakeName}-lineart.png`;
+    a.click();
+    showToast('✦ 線稿已匯出！');
+  } catch(e) {
+    showToast('匯出失敗');
+  } finally {
+    hideSpinner();
+  }
+}
+
+function resetAll() {
+  uploadedImage = null;
+  document.getElementById('mainSection').classList.remove('visible');
+  document.getElementById('previewCard').classList.remove('visible');
+  document.getElementById('exportBar').classList.remove('visible');
+  uploadZone.style.display = '';
+  fileInput.value = '';
+  ['f_name','f_brewery','f_origin','f_year','f_type','f_rice','f_taste'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('noteTitle').textContent = '清酒名稱';
+  if (photoCtx) photoCtx.clearRect(0, 0, W, H);
+  if (lineCtx)  lineCtx.clearRect(0, 0, W, H);
+}
+</script>
+</body>
+</html>
