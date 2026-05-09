@@ -876,38 +876,48 @@ function renderPreviewCanvas(targetCanvas) {
   pc.fillStyle = '#ede8dc';
   pc.fillRect(0, 0, CW, CH);
 
-  // ── 2. Photo: fill entire card ──
+  // ── 2. Photo + Line art: same transform so they align perfectly ──
+  // Contain-fit: scale photo to fit within the card preserving aspect ratio
+  // Then line art (270×510 source) uses the EXACT same dx/dy/dw/dh
+
+  // Photo contain area: full card
+  let photoDx = 0, photoDy = 0, photoDw = CW, photoDh = CH;
   if (uploadedImage) {
-    // Cover-fit: fill entire canvas, centred
-    const sc2 = Math.max(CW / uploadedImage.width, CH / uploadedImage.height);
-    const dw2 = uploadedImage.width * sc2, dh2 = uploadedImage.height * sc2;
-    const dx2 = (CW - dw2) / 2, dy2 = (CH - dh2) / 2;
+    const sc2 = Math.min(CW / uploadedImage.width, CH / uploadedImage.height);
+    photoDw = uploadedImage.width  * sc2;
+    photoDh = uploadedImage.height * sc2;
+    photoDx = (CW - photoDw) / 2;
+    photoDy = (CH - photoDh) / 2;
+
+    pc.save();
     pc.globalAlpha = parseInt(document.getElementById('opacitySlider').value) / 100;
-    pc.drawImage(uploadedImage, dx2, dy2, dw2, dh2);
+    pc.drawImage(uploadedImage, photoDx, photoDy, photoDw, photoDh);
     pc.globalAlpha = 1;
+    pc.restore();
   }
 
-  // ── 3. Filter overlay (full card) ──
-  pc.drawImage(document.getElementById('filterCanvas'), 0, 0, CW, CH);
+  // ── 3. Filter overlay — only over the photo area ──
+  pc.drawImage(document.getElementById('filterCanvas'), photoDx, photoDy, photoDw, photoDh);
 
-  // ── 4. Line art: centred bottle zone ──
-  // Line art is on a 270×510 canvas; place it centred in the card
-  const LAW = Math.round(CW * 0.38);
-  const LAH = Math.round(CH * 0.72);
-  const LAX = Math.round((CW - LAW) / 2);
-  const LAY = Math.round(CH * 0.14);
-  pc.drawImage(document.getElementById('lineCanvas'), LAX, LAY, LAW, LAH);
+  // ── 4. Line art: same position/size as photo ──
+  // lineCanvas is 270×510; scale it to match the photo's rendered size on card
+  // The photo and line art were both rendered from the same uploadedImage dimensions,
+  // so we map lineCanvas (270×510) → (photoDw × photoDh) at (photoDx, photoDy)
+  pc.drawImage(document.getElementById('lineCanvas'), photoDx, photoDy, photoDw, photoDh);
 
   // ── 5. Semi-transparent overlay strips for text legibility ──
-  // Left strip
-  const stripW = Math.round(CW * 0.32);
-  const stripPad = SC * 20;
-  // Left
+  // Strips sit on left and right of the photo, don't overlap the photo centre
+  const stripW   = Math.round(CW * 0.30);
+  const photoL   = Math.round(photoDx);           // left edge of photo
+  const photoR   = Math.round(photoDx + photoDw); // right edge of photo
+  const midX     = CW / 2;
+
   pc.save();
-  pc.fillStyle = 'rgba(237,232,220,0.55)';
-  pc.fillRect(0, 0, stripW, CH);
-  // Right
-  pc.fillRect(CW - stripW, 0, stripW, CH);
+  pc.fillStyle = 'rgba(237,232,220,0.62)';
+  // Left strip: from 0 to min(stripW, photoL+20) — covers card left + slight photo overlap
+  pc.fillRect(0, 0, Math.min(stripW, photoL + SC*20), CH);
+  // Right strip
+  pc.fillRect(Math.max(CW - stripW, photoR - SC*20), 0, CW, CH);
   pc.restore();
 
   // Subtle horizontal ruled lines on strips
