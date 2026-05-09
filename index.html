@@ -480,9 +480,13 @@ body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;
 // ── State ──
 let uploadedImage = null;
 let photoCtx = null, lineCtx = null, filterCtx = null;
-const W = 270, H = 510;
+// IW/IH = actual image dimensions used for all processing canvases
+// These are set dynamically when an image is loaded.
+let IW = 270, IH = 510;
 let lineColor = '#1a1410';
 let filterMode = 'none';
+// Alias W/H for backward-compat
+let W = IW, H = IH;
 
 const FILTER_COLORS = {
   dark:  {r:0,   g:0,   b:0  },
@@ -552,7 +556,7 @@ function applyFilter() {
   const fc = document.getElementById('filterCanvas');
   if (!fc) return;
   const ctx = fc.getContext('2d');
-  ctx.clearRect(0, 0, W, H);
+  ctx.clearRect(0, 0, IW, IH);
   if (filterMode === 'none') { renderPreviewCanvas(); return; }
   const opacity = parseInt(document.getElementById('filterOpacity').value) / 100;
   let r, g, b;
@@ -565,7 +569,7 @@ function applyFilter() {
   }
   ctx.globalAlpha = opacity;
   ctx.fillStyle = `rgb(${r},${g},${b})`;
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(0, 0, IW, IH);
   ctx.globalAlpha = 1;
   renderPreviewCanvas();
 }
@@ -589,9 +593,26 @@ function loadFile(file) {
     const img = new Image();
     img.onload = () => {
       uploadedImage = img;
+
+      // Use image's natural size (capped at 1080px for performance)
+      const maxDim = 1080;
+      const sc0 = Math.min(1, maxDim / Math.max(img.width, img.height));
+      IW = W = Math.round(img.width  * sc0);
+      IH = H = Math.round(img.height * sc0);
+
+      // Resize all three canvases to match
+      ['photoCanvas','filterCanvas','lineCanvas'].forEach(id => {
+        const c = document.getElementById(id);
+        c.width  = IW;
+        c.height = IH;
+        c.style.width  = '270px';   // CSS display size stays small
+        c.style.height = (270 * IH / IW) + 'px';
+      });
+
       photoCtx  = document.getElementById('photoCanvas').getContext('2d');
       filterCtx = document.getElementById('filterCanvas').getContext('2d');
       lineCtx   = document.getElementById('lineCanvas').getContext('2d');
+
       uploadZone.style.display = 'none';
       document.getElementById('mainSection').classList.add('visible');
       drawPhoto();
@@ -603,15 +624,14 @@ function loadFile(file) {
   reader.readAsDataURL(file);
 }
 
-// ── Draw photo background ──
+// ── Draw photo background (full image into photoCanvas at IW×IH) ──
 function drawPhoto() {
   if (!uploadedImage || !photoCtx) return;
   const op = parseInt(document.getElementById('opacitySlider').value) / 100;
-  photoCtx.clearRect(0, 0, W, H);
-  const s = Math.min(W/uploadedImage.width, H/uploadedImage.height);
-  const dw = uploadedImage.width*s, dh = uploadedImage.height*s;
+  photoCtx.clearRect(0, 0, IW, IH);
+  // Draw full photo stretched to fill IW×IH (same aspect ratio since IW/IH derived from image)
   photoCtx.globalAlpha = op;
-  photoCtx.drawImage(uploadedImage, (W-dw)/2, (H-dh)/2, dw, dh);
+  photoCtx.drawImage(uploadedImage, 0, 0, IW, IH);
   photoCtx.globalAlpha = 1;
 }
 
@@ -636,17 +656,15 @@ function traceBottle() {
   const lc      = hexToRgb(lineColor);
   const colStr  = `rgb(${lc.r},${lc.g},${lc.b})`;
 
-  // ── 1. Render photo onto white offscreen canvas ──
+  // ── 1. Render photo onto white offscreen canvas (IW×IH = image native size) ──
   const off = document.createElement('canvas');
-  off.width = W; off.height = H;
+  off.width = IW; off.height = IH;
   const oc = off.getContext('2d');
   oc.fillStyle = '#ffffff';
-  oc.fillRect(0, 0, W, H);
-  const sc2 = Math.min(W/uploadedImage.width, H/uploadedImage.height);
-  const dw2 = uploadedImage.width*sc2, dh2 = uploadedImage.height*sc2;
-  const ox2 = Math.round((W-dw2)/2), oy2 = Math.round((H-dh2)/2);
-  oc.drawImage(uploadedImage, ox2, oy2, dw2, dh2);
-  const imgData = oc.getImageData(0, 0, W, H);
+  oc.fillRect(0, 0, IW, IH);
+  // Full-stretch: image fills IW×IH exactly (same aspect since IW/IH derived from image)
+  oc.drawImage(uploadedImage, 0, 0, IW, IH);
+  const imgData = oc.getImageData(0, 0, IW, IH);
   const px = imgData.data;
 
   // ── 2. Background removal via flood-fill from all 4 corners ──
@@ -682,15 +700,15 @@ function traceBottle() {
     }
   }
   // Seed all border pixels
-  for (let x = 0; x < W; x++) { seed(x, 0); seed(x, H-1); }
-  for (let y = 1; y < H-1; y++) { seed(0, y); seed(W-1, y); }
+  for (let x = 0; x < IW; x++) { seed(x, 0); seed(x, IH-1); }
+  for (let y = 1; y < IH-1; y++) { seed(0, y); seed(IW-1, y); }
 
   let qi = 0;
   while (qi < queue.length) {
     const cur = queue[qi++];
-    const cx = cur % W, cy = Math.floor(cur / W);
+    const cx = cur % IW, cy = Math.floor(cur / IW);
     for (const [nx, ny] of [[cx-1,cy],[cx+1,cy],[cx,cy-1],[cx,cy+1]]) {
-      if (nx<0||nx>=W||ny<0||ny>=H) continue;
+      if (nx<0||nx>=IW||ny<0||ny>=IH) continue;
       const ni = ny*W+nx;
       if (visited[ni]) continue;
       visited[ni] = 1;
@@ -701,8 +719,8 @@ function traceBottle() {
   }
 
   // bottle mask = NOT background
-  const bottleMask = new Uint8Array(W * H);
-  for (let i = 0; i < W*H; i++) bottleMask[i] = bgMask[i] ? 0 : 1;
+  const bottleMask = new Uint8Array(IW * IH);
+  for (let i = 0; i < IW*IH; i++) bottleMask[i] = bgMask[i] ? 0 : 1;
 
   // ── 3. Morphological operations to get clean contour ring ──
   // a) Dilate bottleMask by `expand` px → expandedMask
@@ -721,19 +739,17 @@ function traceBottle() {
   const R_ero = R_inner;
 
   function dilate(src, radius) {
-    const dst = new Uint8Array(W * H);
-    // Per-row min/max scan for efficiency (Manhattan approx then refine)
-    // Use proper circular dilation: for each bottle pixel, mark a circle around it
-    for (let y = 0; y < H; y++) {
-      for (let x = 0; x < W; x++) {
-        if (!src[y*W+x]) continue;
-        const y0 = Math.max(0, y-radius), y1 = Math.min(H-1, y+radius);
-        const x0 = Math.max(0, x-radius), x1 = Math.min(W-1, x+radius);
+    const dst = new Uint8Array(IW * IH);
+    for (let y = 0; y < IH; y++) {
+      for (let x = 0; x < IW; x++) {
+        if (!src[y*IW+x]) continue;
+        const y0 = Math.max(0, y-radius), y1 = Math.min(IH-1, y+radius);
+        const x0 = Math.max(0, x-radius), x1 = Math.min(IW-1, x+radius);
         for (let dy = y0; dy <= y1; dy++) {
           const ry = dy-y;
           const rxMax = Math.round(Math.sqrt(Math.max(0, radius*radius - ry*ry)));
           const lx2 = Math.max(x0, x-rxMax), rx2 = Math.min(x1, x+rxMax);
-          for (let dx = lx2; dx <= rx2; dx++) dst[dy*W+dx] = 1;
+          for (let dx = lx2; dx <= rx2; dx++) dst[dy*IW+dx] = 1;
         }
       }
     }
@@ -741,18 +757,18 @@ function traceBottle() {
   }
 
   function erode(src, radius) {
-    const dst = new Uint8Array(W * H);
-    for (let y = radius; y < H-radius; y++) {
-      for (let x = radius; x < W-radius; x++) {
-        if (!src[y*W+x]) continue;
+    const dst = new Uint8Array(IW * IH);
+    for (let y = radius; y < IH-radius; y++) {
+      for (let x = radius; x < IW-radius; x++) {
+        if (!src[y*IW+x]) continue;
         let allOne = true;
         outer: for (let dy = -radius; dy <= radius && allOne; dy++) {
           const rxMax = Math.round(Math.sqrt(Math.max(0, radius*radius - dy*dy)));
           for (let dx = -rxMax; dx <= rxMax; dx++) {
-            if (!src[(y+dy)*W+(x+dx)]) { allOne = false; break outer; }
+            if (!src[(y+dy)*IW+(x+dx)]) { allOne = false; break outer; }
           }
         }
-        if (allOne) dst[y*W+x] = 1;
+        if (allOne) dst[y*IW+x] = 1;
       }
     }
     return dst;
@@ -764,18 +780,18 @@ function traceBottle() {
 
   // contour = pixels in outerRing but NOT in innerFill
   // = only the ring between `expand` and `expand+lw` px outside bottle
-  const contour = new Uint8Array(W * H);
-  for (let i = 0; i < W*H; i++) {
+  const contour = new Uint8Array(IW * IH);
+  for (let i = 0; i < IW*IH; i++) {
     contour[i] = (outerRing[i] && !innerFill[i]) ? 1 : 0;
   }
 
   // ── 4. Draw contour onto lineCanvas ──
-  lineCtx.clearRect(0, 0, W, H);
+  lineCtx.clearRect(0, 0, IW, IH);
 
-  const outImg = lineCtx.createImageData(W, H);
+  const outImg = lineCtx.createImageData(IW, IH);
   const od = outImg.data;
 
-  for (let i = 0; i < W*H; i++) {
+  for (let i = 0; i < IW*IH; i++) {
     if (!contour[i]) continue;
     // Slight per-pixel brightness variation for hand-drawn feel
     const jitter = (Math.random()-0.5)*18;
@@ -789,7 +805,7 @@ function traceBottle() {
   // ── 5. Thicken with lineWidth stroke if lw > 1 ──
   if (lw > 1) {
     const tmp2 = document.createElement('canvas');
-    tmp2.width = W; tmp2.height = H;
+    tmp2.width = IW; tmp2.height = IH;
     const tc2 = tmp2.getContext('2d');
     tc2.drawImage(document.getElementById('lineCanvas'), 0, 0);
     lineCtx.clearRect(0, 0, W, H);
@@ -821,7 +837,7 @@ function traceBottle() {
   }
 }
 
-function clearLine() { if (lineCtx) lineCtx.clearRect(0, 0, W, H); }
+function clearLine() { if (lineCtx) lineCtx.clearRect(0, 0, IW, IH); }
 
 // ── Slider listeners ──
 ['traceSlider','opacitySlider','maskTop','expandSlider','lineWidthSlider','filterOpacity'].forEach(id => {
@@ -876,33 +892,33 @@ function renderPreviewCanvas(targetCanvas) {
   pc.fillStyle = '#ede8dc';
   pc.fillRect(0, 0, CW, CH);
 
-  // ── 2. Photo + Line art: same transform so they align perfectly ──
-  // Contain-fit: scale photo to fit within the card preserving aspect ratio
-  // Then line art (270×510 source) uses the EXACT same dx/dy/dw/dh
+  // ── 2. Photo + Line art ──
+  // Both photoCanvas and lineCanvas are IW×IH (image native resolution)
+  // Contain-fit into card: same scale for both → perfect alignment
 
-  // Photo contain area: full card
   let photoDx = 0, photoDy = 0, photoDw = CW, photoDh = CH;
   if (uploadedImage) {
-    const sc2 = Math.min(CW / uploadedImage.width, CH / uploadedImage.height);
-    photoDw = uploadedImage.width  * sc2;
-    photoDh = uploadedImage.height * sc2;
+    const lcv = document.getElementById('lineCanvas');
+    const imgW = lcv ? lcv.width  : uploadedImage.width;
+    const imgH = lcv ? lcv.height : uploadedImage.height;
+    const sc2 = Math.min(CW / imgW, CH / imgH);
+    photoDw = imgW * sc2;
+    photoDh = imgH * sc2;
     photoDx = (CW - photoDw) / 2;
     photoDy = (CH - photoDh) / 2;
 
+    // Draw photo (photoCanvas already has the image at IW×IH)
     pc.save();
     pc.globalAlpha = parseInt(document.getElementById('opacitySlider').value) / 100;
-    pc.drawImage(uploadedImage, photoDx, photoDy, photoDw, photoDh);
+    pc.drawImage(document.getElementById('photoCanvas'), photoDx, photoDy, photoDw, photoDh);
     pc.globalAlpha = 1;
     pc.restore();
   }
 
-  // ── 3. Filter overlay — only over the photo area ──
+  // ── 3. Filter overlay — scaled to photo area ──
   pc.drawImage(document.getElementById('filterCanvas'), photoDx, photoDy, photoDw, photoDh);
 
-  // ── 4. Line art: same position/size as photo ──
-  // lineCanvas is 270×510; scale it to match the photo's rendered size on card
-  // The photo and line art were both rendered from the same uploadedImage dimensions,
-  // so we map lineCanvas (270×510) → (photoDw × photoDh) at (photoDx, photoDy)
+  // ── 4. Line art — same rect as photo → perfect overlap ──
   pc.drawImage(document.getElementById('lineCanvas'), photoDx, photoDy, photoDw, photoDh);
 
   // ── 5. Semi-transparent overlay strips for text legibility ──
