@@ -6,502 +6,452 @@
 <title>清酒手帖 · Sake Handdrawn Note</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Noto+Serif+JP:wght@300;400;700&family=Ma+Shan+Zheng&family=Liu+Jian+Mao+Cao&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Noto+Serif+JP:wght@300;400;700&family=Ma+Shan+Zheng&display=swap');
 
 *{margin:0;padding:0;box-sizing:border-box}
-
 :root{
-  --ink:#1a1410;
-  --ink-light:#3d2e22;
-  --paper:#f7f3ec;
-  --paper-aged:#ede8dc;
-  --sepia:#8b6f47;
-  --accent:#8b2020;
-  --line:rgba(26,20,16,0.18);
+  --ink:#1a1410;--paper:#f7f3ec;--paper-aged:#ede8dc;
+  --sepia:#8b6f47;--accent:#8b2020;
 }
+body{background:var(--paper);font-family:'Noto Serif JP',serif;min-height:100vh;color:var(--ink)}
+.app-wrapper{max-width:1020px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
 
-body{
-  background:var(--paper);
-  font-family:'Noto Serif JP',serif;
-  min-height:100vh;
-  color:var(--ink);
-}
+/* Header */
+.header{text-align:center;margin-bottom:2.8rem}
+.header h1{font-family:'Kaisei Decol',serif;font-size:2.5rem;font-weight:700;letter-spacing:0.28em}
+.header h1 span{display:block;width:50%;margin:.45rem auto 0;height:1.5px;background:var(--ink);opacity:.18}
+.header p{font-size:.76rem;letter-spacing:.22em;color:var(--sepia);margin-top:.5rem}
 
-.app-wrapper{
-  max-width:980px;
-  margin:0 auto;
-  padding:2.5rem 1.5rem 5rem;
-}
-
-/* ── Header ── */
-.header{
-  text-align:center;
-  margin-bottom:2.8rem;
-}
-.header h1{
-  font-family:'Kaisei Decol',serif;
-  font-size:2.6rem;
-  font-weight:700;
-  letter-spacing:0.28em;
-  color:var(--ink);
-}
-.header h1 span{
-  display:block;
-  width:55%;
-  margin:0.45rem auto 0;
-  height:1.5px;
-  background:var(--ink);
-  opacity:0.2;
-}
-.header p{
-  font-size:0.78rem;
-  letter-spacing:0.22em;
-  color:var(--sepia);
-  margin-top:0.55rem;
-}
-
-/* ── Upload ── */
-.upload-zone{
-  border:1.5px dashed var(--sepia);
-  border-radius:4px;
-  padding:3rem 2rem;
-  text-align:center;
-  cursor:pointer;
-  transition:background 0.2s;
-  margin-bottom:2.2rem;
-  background:rgba(139,111,71,0.03);
-}
-.upload-zone:hover{background:rgba(139,111,71,0.08)}
-.upload-zone.dragging{background:rgba(139,111,71,0.13);border-style:solid}
+/* Upload */
+.upload-zone{border:1.5px dashed var(--sepia);border-radius:4px;padding:3rem 2rem;text-align:center;cursor:pointer;transition:background .2s;margin-bottom:2rem;background:rgba(139,111,71,.03)}
+.upload-zone:hover{background:rgba(139,111,71,.08)}
+.upload-zone.dragging{background:rgba(139,111,71,.13);border-style:solid}
 .upload-zone input{display:none}
-.upload-icon{font-size:2.4rem;display:block;margin-bottom:0.8rem}
-.upload-zone p{color:var(--sepia);font-size:0.92rem;letter-spacing:0.08em}
-.upload-zone small{font-size:0.74rem;color:#b09a7e;margin-top:0.3rem;display:block}
+.upload-icon{font-size:2.4rem;display:block;margin-bottom:.8rem}
+.upload-zone p{color:var(--sepia);font-size:.9rem;letter-spacing:.08em}
+.upload-zone small{font-size:.73rem;color:#b09a7e;margin-top:.3rem;display:block}
 
-/* ── Main section ── */
-.main-section{display:none;gap:2rem;margin-bottom:2.2rem}
+/* Main layout */
+.main-section{display:none;gap:2rem;margin-bottom:2rem}
 .main-section.visible{display:flex}
 
-/* ── Bottle panel ── */
-.bottle-panel{
-  flex:0 0 270px;
-  background:var(--paper-aged);
-  border:1px solid rgba(26,20,16,0.12);
-  border-radius:3px;
-  overflow:hidden;
-  position:relative;
-}
-.bottle-canvas-wrap{
-  position:relative;
-  width:270px;
-  height:510px;
-}
+/* Bottle panel */
+.bottle-panel{flex:0 0 270px;background:var(--paper-aged);border:1px solid rgba(26,20,16,.12);border-radius:3px;overflow:hidden}
+.bottle-canvas-wrap{position:relative;width:270px;height:510px}
 #photoCanvas{position:absolute;top:0;left:0;width:270px;height:510px}
+#filterCanvas{position:absolute;top:0;left:0;width:270px;height:510px;pointer-events:none}
 #lineCanvas {position:absolute;top:0;left:0;width:270px;height:510px}
 
-/* ── Notes panel ── */
+/* Filter row */
+.filter-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;flex-wrap:wrap}
+.filter-row label{font-size:.73rem;color:var(--sepia);letter-spacing:.05em}
+.filter-chips{display:flex;gap:.3rem;flex-wrap:wrap}
+.fchip{
+  font-size:.68rem;padding:.22rem .55rem;border-radius:20px;cursor:pointer;
+  border:1px solid rgba(26,20,16,.2);color:var(--sepia);
+  font-family:'Noto Serif JP',serif;letter-spacing:.05em;
+  transition:all .15s;user-select:none;
+}
+.fchip:hover{border-color:var(--ink);color:var(--ink)}
+.fchip.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.fchip.fc-dark{border-color:#444}
+.fchip.fc-light{border-color:#c8b89a}
+.fchip.fc-warm{border-color:#b87340}
+.fchip.fc-cool{border-color:#3a6a9a}
+.fchip.fc-sepia{border-color:#8b6f47}
+.fchip.fc-custom{border-color:#7a4a8a}
+
+/* Notes panel */
 .notes-panel{flex:1;display:flex;flex-direction:column;gap:0}
+.section-label{font-size:.67rem;letter-spacing:.24em;color:var(--sepia);text-transform:uppercase;margin-bottom:.8rem;display:flex;align-items:center;gap:.8rem}
+.section-label::after{content:'';flex:1;height:1px;background:rgba(26,20,16,.11)}
 
-.section-label{
-  font-size:0.68rem;
-  letter-spacing:0.25em;
-  color:var(--sepia);
-  text-transform:uppercase;
-  margin-bottom:0.8rem;
-  display:flex;
-  align-items:center;
-  gap:0.8rem;
-}
-.section-label::after{content:'';flex:1;height:1px;background:rgba(26,20,16,0.12)}
+/* Controls */
+.ctrl-row{display:flex;align-items:center;gap:.65rem;margin-bottom:.75rem;flex-wrap:wrap}
+.ctrl-row label{font-size:.73rem;color:var(--sepia);letter-spacing:.05em}
+.ctrl-row input[type=range]{width:90px;accent-color:var(--ink)}
+.ctrl-row span{font-size:.73rem;color:var(--ink);min-width:24px}
 
-/* Trace controls */
-.trace-row{
-  display:flex;
-  align-items:center;
-  gap:0.7rem;
-  margin-bottom:0.9rem;
-  flex-wrap:wrap;
-}
-.trace-row label{font-size:0.76rem;color:var(--sepia);letter-spacing:0.06em}
-.trace-row input[type=range]{width:100px;accent-color:var(--ink)}
-.trace-row span{font-size:0.76rem;color:var(--ink);min-width:26px}
+/* Tone pills */
+.tone-row{display:flex;gap:.42rem;margin-bottom:.9rem;flex-wrap:wrap;align-items:center}
+.tone-row label{font-size:.71rem;color:var(--sepia);letter-spacing:.06em;margin-right:.2rem}
+.tone-pill{width:21px;height:21px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:transform .15s,box-shadow .15s;flex-shrink:0}
+.tone-pill:hover{transform:scale(1.2)}
+.tone-pill.active{border-color:var(--ink);box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--ink)}
 
 /* Buttons */
-.btn-row{display:flex;gap:0.7rem;margin-bottom:1rem;flex-wrap:wrap}
-.btn{
-  background:var(--ink);
-  color:var(--paper);
-  border:none;
-  padding:0.52rem 1.1rem;
-  font-family:'Noto Serif JP',serif;
-  font-size:0.78rem;
-  letter-spacing:0.1em;
-  cursor:pointer;
-  border-radius:2px;
-  transition:opacity 0.2s;
-}
-.btn:hover{opacity:0.72}
-.btn.outline{background:transparent;color:var(--ink);border:1px solid rgba(26,20,16,0.35)}
+.btn-row{display:flex;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap}
+.btn{background:var(--ink);color:var(--paper);border:none;padding:.48rem 1rem;font-family:'Noto Serif JP',serif;font-size:.76rem;letter-spacing:.1em;cursor:pointer;border-radius:2px;transition:opacity .2s}
+.btn:hover{opacity:.72}
+.btn.outline{background:transparent;color:var(--ink);border:1px solid rgba(26,20,16,.35)}
 .btn.accent{background:var(--accent)}
 .btn.green{background:#3a6b2a}
 .btn.blue{background:#1e4a72}
 
 /* Notes paper */
 .notes-paper{
-  background:
-    repeating-linear-gradient(transparent,transparent 37px,rgba(26,20,16,0.07) 37px,rgba(26,20,16,0.07) 38px),
-    var(--paper);
-  border:1px solid rgba(26,20,16,0.12);
-  border-radius:3px;
-  padding:1.5rem 1.5rem 1.5rem 3rem;
-  flex:1;
-  position:relative;
+  background:repeating-linear-gradient(transparent,transparent 37px,rgba(26,20,16,.07) 37px,rgba(26,20,16,.07) 38px),var(--paper);
+  border:1px solid rgba(26,20,16,.12);border-radius:3px;
+  padding:1.4rem 1.4rem 1.4rem 2.9rem;flex:1;position:relative;
 }
-.notes-paper::before{
-  content:'';
-  position:absolute;
-  left:2.2rem;top:0;bottom:0;
-  width:1px;
-  background:rgba(139,32,32,0.22);
-}
+.notes-paper::before{content:'';position:absolute;left:2.1rem;top:0;bottom:0;width:1px;background:rgba(139,32,32,.22)}
 
 .sake-stamp{
-  width:58px;height:58px;
-  border:2.5px solid var(--accent);
-  border-radius:50%;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  position:absolute;top:1rem;right:1rem;
-  color:var(--accent);
-  font-family:'Kaisei Decol',serif;
-  font-size:0.48rem;letter-spacing:0.1em;
-  text-align:center;
-  opacity:0.5;
-  line-height:1.4;
-  transform:rotate(-12deg);
+  width:56px;height:56px;border:2.5px solid var(--accent);border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:absolute;top:1rem;right:1rem;color:var(--accent);
+  font-family:'Kaisei Decol',serif;font-size:.46rem;letter-spacing:.1em;
+  text-align:center;opacity:.47;line-height:1.4;transform:rotate(-12deg);
 }
-.sake-stamp .sm{font-size:0.88rem;font-weight:700}
+.sake-stamp .sm{font-size:.85rem;font-weight:700}
 
-.note-title{
-  font-family:'Kaisei Decol',serif;
-  font-size:1.45rem;
-  letter-spacing:0.14em;
-  margin-bottom:1.4rem;
-  padding-bottom:0.5rem;
-  border-bottom:1px solid rgba(26,20,16,0.15);
-  font-weight:700;
-}
+.note-title{font-family:'Kaisei Decol',serif;font-size:1.4rem;letter-spacing:.14em;margin-bottom:1.25rem;padding-bottom:.42rem;border-bottom:1px solid rgba(26,20,16,.14);font-weight:700}
+.note-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem 1.25rem}
 
-.note-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:1.1rem 1.4rem;
+/* Field */
+.note-field{position:relative}
+.field-head{display:flex;align-items:center;gap:.38rem;margin-bottom:.18rem;flex-wrap:wrap}
+.field-head > label{font-size:.61rem;letter-spacing:.17em;color:var(--sepia);text-transform:uppercase;flex:1;min-width:60px}
+.field-head .ja{font-size:.66rem;color:rgba(139,111,71,.6)}
+
+/* Style controls inline */
+.fstyle{display:flex;align-items:center;gap:.3rem}
+.fstyle input[type=color]{
+  width:17px;height:17px;border:1px solid rgba(26,20,16,.22);border-radius:50%;
+  padding:0;cursor:pointer;background:none;outline:none;
+  -webkit-appearance:none;overflow:hidden;flex-shrink:0;
 }
-.note-field label{
-  font-size:0.63rem;
-  letter-spacing:0.18em;
-  color:var(--sepia);
-  text-transform:uppercase;
-  display:block;
-  margin-bottom:0.22rem;
-}
-.note-field .ja{
-  font-size:0.68rem;
-  color:rgba(139,111,71,0.65);
-  margin-left:0.3em;
-}
-.note-field input,
-.note-field textarea{
-  width:100%;
-  background:transparent;
-  border:none;
-  border-bottom:1px solid rgba(26,20,16,0.18);
-  padding:0.22rem 0;
-  font-size:1.05rem;
-  font-family:'Ma Shan Zheng','Liu Jian Mao Cao',cursive;
-  color:var(--ink);
-  outline:none;
-  transition:border-color 0.2s;
-  resize:none;
-  line-height:1.6;
-}
-.note-field input::placeholder,
-.note-field textarea::placeholder{
-  color:rgba(26,20,16,0.18);
-  font-size:0.82rem;
+.fstyle input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+.fstyle input[type=color]::-webkit-color-swatch{border:none;border-radius:50%}
+.fstyle select{
+  font-size:.63rem;color:var(--ink);background:var(--paper);
+  border:1px solid rgba(26,20,16,.18);border-radius:2px;
+  outline:none;cursor:pointer;padding:1px 3px;
   font-family:'Noto Serif JP',serif;
 }
-.note-field input:focus,
-.note-field textarea:focus{border-bottom-color:var(--accent)}
+
+.note-field input,.note-field textarea{
+  width:100%;background:transparent;border:none;
+  border-bottom:1px solid rgba(26,20,16,.17);padding:.2rem 0;
+  font-family:'Ma Shan Zheng',cursive;outline:none;
+  transition:border-color .2s;resize:none;line-height:1.65;
+}
+.note-field input::placeholder,.note-field textarea::placeholder{
+  color:rgba(26,20,16,.17);font-size:.78rem;font-family:'Noto Serif JP',serif;
+}
+.note-field input:focus,.note-field textarea:focus{border-bottom-color:var(--accent)}
 .note-field.full{grid-column:1/-1}
-.note-field textarea{min-height:52px}
+.note-field textarea{min-height:50px}
 
-/* ── Preview card ── */
-.preview-card{
-  display:none;
-  background:var(--paper-aged);
-  border:1px solid rgba(26,20,16,0.15);
-  border-radius:4px;
-  padding:2.2rem;
-  position:relative;
-  overflow:hidden;
-  margin-bottom:1.5rem;
-}
+/* Preview card */
+.preview-card{display:none;background:var(--paper-aged);border:1px solid rgba(26,20,16,.14);border-radius:4px;padding:2.2rem;position:relative;overflow:hidden;margin-bottom:1.4rem}
 .preview-card.visible{display:block}
-
-.wm{
-  position:absolute;
-  font-family:'Kaisei Decol',serif;
-  font-size:8rem;
-  color:rgba(26,20,16,0.022);
-  top:50%;left:50%;
-  transform:translate(-50%,-50%) rotate(-20deg);
-  pointer-events:none;
-  white-space:nowrap;
-  letter-spacing:0.1em;
-}
-
+.wm{position:absolute;font-family:'Kaisei Decol',serif;font-size:8rem;color:rgba(26,20,16,.02);top:50%;left:50%;transform:translate(-50%,-50%) rotate(-20deg);pointer-events:none;white-space:nowrap;letter-spacing:.1em}
 .preview-inner{display:flex;gap:2.5rem;position:relative}
-
-.preview-bottle{flex:0 0 170px;height:420px;position:relative}
+.preview-bottle{flex:0 0 170px;height:420px}
 #previewCanvas{width:170px;height:420px}
-
 .preview-notes{flex:1}
-
-.prev-name{
-  font-family:'Kaisei Decol',serif;
-  font-size:2rem;
-  font-weight:700;
-  letter-spacing:0.15em;
-  margin-bottom:1.3rem;
-  line-height:1.2;
-}
-
-.prev-fields{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:1rem 1.5rem;
-}
-.pf{border-bottom:1px solid rgba(26,20,16,0.1);padding-bottom:0.6rem}
-.pf-label{font-size:0.58rem;letter-spacing:0.2em;color:var(--sepia);text-transform:uppercase;margin-bottom:0.12rem}
-.pf-value{
-  font-family:'Ma Shan Zheng',cursive;
-  font-size:1.18rem;
-  color:var(--ink);
-  line-height:1.4;
-}
+.prev-name{font-family:'Kaisei Decol',serif;font-size:1.9rem;font-weight:700;letter-spacing:.15em;margin-bottom:1.15rem;line-height:1.2}
+.prev-fields{display:grid;grid-template-columns:1fr 1fr;gap:1rem 1.5rem}
+.pf{border-bottom:1px solid rgba(26,20,16,.1);padding-bottom:.52rem}
+.pf-label{font-size:.57rem;letter-spacing:.2em;color:var(--sepia);text-transform:uppercase;margin-bottom:.1rem}
+.pf-value{font-family:'Ma Shan Zheng',cursive;font-size:1.15rem;line-height:1.4}
 .pf.full{grid-column:1/-1}
+.brush-deco{position:absolute;bottom:-12px;right:-12px;opacity:.05;pointer-events:none}
 
-/* Brush deco SVG */
-.brush-deco{position:absolute;bottom:-12px;right:-12px;opacity:0.05;pointer-events:none}
-
-/* ── Export bar ── */
-.export-bar{
-  display:none;
-  align-items:center;
-  gap:1rem;
-  padding:1rem 1.2rem;
-  background:rgba(26,20,16,0.04);
-  border:1px solid rgba(26,20,16,0.1);
-  border-radius:3px;
-  margin-bottom:2rem;
-}
+/* Export bar */
+.export-bar{display:none;align-items:center;gap:.85rem;padding:.9rem 1.2rem;background:rgba(26,20,16,.04);border:1px solid rgba(26,20,16,.1);border-radius:3px;margin-bottom:2rem;flex-wrap:wrap}
 .export-bar.visible{display:flex}
-.export-bar span{
-  font-size:0.8rem;
-  color:var(--sepia);
-  letter-spacing:0.1em;
-  margin-right:auto;
-}
+.export-bar > span{font-size:.78rem;color:var(--sepia);letter-spacing:.1em;margin-right:auto}
+.size-select{font-family:'Noto Serif JP',serif;font-size:.76rem;border:1px solid rgba(26,20,16,.25);background:var(--paper);color:var(--ink);padding:.36rem .55rem;border-radius:2px;outline:none;cursor:pointer}
 
-/* export size selector */
-.size-select{
-  font-family:'Noto Serif JP',serif;
-  font-size:0.78rem;
-  border:1px solid rgba(26,20,16,0.25);
-  background:var(--paper);
-  color:var(--ink);
-  padding:0.4rem 0.6rem;
-  border-radius:2px;
-  outline:none;
-  cursor:pointer;
-}
+/* GitHub */
+.github-bar{margin-top:2.5rem;text-align:center;padding-top:1.4rem;border-top:1px solid rgba(26,20,16,.1)}
+.github-bar a{display:inline-flex;align-items:center;gap:.5rem;color:var(--ink);text-decoration:none;font-size:.78rem;letter-spacing:.1em;border-bottom:1px solid rgba(26,20,16,.27);padding-bottom:2px;transition:opacity .2s}
+.github-bar a:hover{opacity:.55}
 
-/* ── GitHub ── */
-.github-bar{
-  margin-top:2.5rem;
-  text-align:center;
-  padding-top:1.5rem;
-  border-top:1px solid rgba(26,20,16,0.1);
-}
-.github-bar a{
-  display:inline-flex;
-  align-items:center;
-  gap:0.5rem;
-  color:var(--ink);
-  text-decoration:none;
-  font-size:0.8rem;
-  letter-spacing:0.1em;
-  border-bottom:1px solid rgba(26,20,16,0.28);
-  padding-bottom:2px;
-  transition:opacity 0.2s;
-}
-.github-bar a:hover{opacity:0.55}
-
-/* ── Toast ── */
-.toast{
-  position:fixed;
-  bottom:2rem;
-  left:50%;
-  transform:translateX(-50%) translateY(20px);
-  background:var(--ink);
-  color:var(--paper);
-  padding:0.7rem 1.6rem;
-  border-radius:2px;
-  font-size:0.82rem;
-  letter-spacing:0.1em;
-  opacity:0;
-  transition:opacity 0.3s,transform 0.3s;
-  pointer-events:none;
-  z-index:999;
-}
+/* Toast */
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:.62rem 1.5rem;border-radius:2px;font-size:.79rem;letter-spacing:.1em;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;z-index:999}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* ── Spinner ── */
-.spinner-overlay{
-  display:none;
-  position:fixed;
-  inset:0;
-  background:rgba(247,243,236,0.8);
-  z-index:998;
-  align-items:center;
-  justify-content:center;
-  flex-direction:column;
-  gap:1rem;
-}
+/* Spinner */
+.spinner-overlay{display:none;position:fixed;inset:0;background:rgba(247,243,236,.82);z-index:998;align-items:center;justify-content:center;flex-direction:column;gap:1rem}
 .spinner-overlay.visible{display:flex}
-.spinner{
-  width:36px;height:36px;
-  border:2px solid rgba(26,20,16,0.15);
-  border-top-color:var(--ink);
-  border-radius:50%;
-  animation:spin 0.8s linear infinite;
-}
+.spinner{width:34px;height:34px;border:2px solid rgba(26,20,16,.13);border-top-color:var(--ink);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.spinner-overlay p{font-size:0.82rem;color:var(--sepia);letter-spacing:0.12em}
+.spinner-overlay p{font-size:.79rem;color:var(--sepia);letter-spacing:.12em}
 
-@media(max-width:680px){
+@media(max-width:700px){
   .main-section{flex-direction:column}
   .bottle-panel{flex:none}
   .note-grid{grid-template-columns:1fr}
   .preview-inner{flex-direction:column}
   .preview-bottle{flex:none;height:240px}
   .prev-fields{grid-template-columns:1fr}
-  .export-bar{flex-wrap:wrap}
 }
 </style>
 </head>
 <body>
 
-<!-- Spinner -->
 <div class="spinner-overlay" id="spinnerOverlay">
   <div class="spinner"></div>
   <p id="spinnerMsg">匯出中，請稍候…</p>
 </div>
-
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <div class="app-wrapper">
 
-  <!-- Header -->
   <header class="header">
     <h1>清　酒　手　帖<span></span></h1>
     <p>SAKE　HANDDRAWN　NOTE</p>
   </header>
 
-  <!-- Upload -->
   <div class="upload-zone" id="uploadZone">
     <input type="file" id="fileInput" accept="image/*">
     <span class="upload-icon">🍶</span>
     <p>點擊或拖曳上傳清酒瓶照片</p>
-    <small>支援 JPG、PNG、WEBP｜照片僅暫時存於本機，不會上傳</small>
+    <small>支援 JPG · PNG · WEBP｜照片僅暫時存於本機，不會上傳伺服器</small>
   </div>
 
-  <!-- Main: bottle + notes -->
   <div class="main-section" id="mainSection">
 
     <!-- Bottle canvas -->
     <div class="bottle-panel">
       <div class="bottle-canvas-wrap">
-        <canvas id="photoCanvas" width="270" height="510"></canvas>
-        <canvas id="lineCanvas"  width="270" height="510"></canvas>
+        <canvas id="photoCanvas"  width="270" height="510"></canvas>
+        <canvas id="filterCanvas" width="270" height="510"></canvas>
+        <canvas id="lineCanvas"   width="270" height="510"></canvas>
       </div>
     </div>
 
     <!-- Notes -->
     <div class="notes-panel">
-      <div class="section-label">清酒筆記</div>
 
-      <div class="trace-row">
-        <label>線稿強度</label>
-        <input type="range" id="traceSlider" min="0" max="100" value="55">
-        <span id="traceVal">55</span>
+      <div class="section-label">線稿設定</div>
 
-        <label style="margin-left:0.8rem">底圖透明度</label>
-        <input type="range" id="opacitySlider" min="5" max="60" value="22">
-        <span id="opacityVal">22</span>%
+      <div class="ctrl-row">
+        <label>輪廓靈敏度</label>
+        <input type="range" id="traceSlider" min="0" max="100" value="62">
+        <span id="traceVal">62</span>
+        <label style="margin-left:.5rem">底圖透明度</label>
+        <input type="range" id="opacitySlider" min="5" max="60" value="20">
+        <span id="opacityVal">20</span>%
+      </div>
+
+      <!-- Label suppression zone sliders -->
+      <div class="ctrl-row">
+        <label title="從瓶頂往下，此範圍內只保留外輪廓">遮罩上緣</label>
+        <input type="range" id="maskTop" min="0" max="85" value="28">
+        <span id="maskTopVal">28</span>%
+        <label style="margin-left:.5rem" title="從瓶底往上，此範圍內只保留外輪廓">遮罩下緣</label>
+        <input type="range" id="maskBot" min="0" max="85" value="22">
+        <span id="maskBotVal">22</span>%
+        <label style="margin-left:.5rem" title="輪廓邊緣保留寬度">邊緣寬</label>
+        <input type="range" id="marginSlider" min="3" max="30" value="10">
+        <span id="marginVal">10</span>px
+        <label style="margin-left:.5rem" title="線稿向外擴張距離（px）">外擴距離</label>
+        <input type="range" id="expandSlider" min="0" max="24" value="10">
+        <span id="expandVal">10</span>px
+      </div>
+
+      <!-- Line color + thickness -->
+      <div class="tone-row">
+        <label>線條顏色</label>
+        <div class="tone-pill active" data-color="#1a1410" style="background:#1a1410" title="墨黑" onclick="setTone(this,'#1a1410')"></div>
+        <div class="tone-pill" data-color="#3d2b1f" style="background:#3d2b1f" title="深茶" onclick="setTone(this,'#3d2b1f')"></div>
+        <div class="tone-pill" data-color="#5a3e28" style="background:#5a3e28" title="棕褐" onclick="setTone(this,'#5a3e28')"></div>
+        <div class="tone-pill" data-color="#6b4226" style="background:#6b4226" title="赤茶" onclick="setTone(this,'#6b4226')"></div>
+        <div class="tone-pill" data-color="#2c4a2e" style="background:#2c4a2e" title="苔綠" onclick="setTone(this,'#2c4a2e')"></div>
+        <div class="tone-pill" data-color="#1e3a5f" style="background:#1e3a5f" title="藏青" onclick="setTone(this,'#1e3a5f')"></div>
+        <div class="tone-pill" data-color="#8b2020" style="background:#8b2020" title="辰砂" onclick="setTone(this,'#8b2020')"></div>
+        <div class="tone-pill" data-color="#f5f0e8" style="background:#f5f0e8;border:1px solid #bbb" title="白稿" onclick="setTone(this,'#f5f0e8')"></div>
+        <label style="margin-left:.4rem">自訂</label>
+        <input type="color" id="lineColorPicker" value="#1a1410"
+          style="width:21px;height:21px;border:1px solid rgba(26,20,16,.25);border-radius:50%;padding:0;cursor:pointer;background:none;outline:none;-webkit-appearance:none;overflow:hidden;flex-shrink:0"
+          oninput="setCustomLineColor(this.value)" onchange="setCustomLineColor(this.value)">
+        <label style="margin-left:.7rem">粗細</label>
+        <input type="range" id="lineWidthSlider" min="1" max="8" step="0.5" value="1.5" style="width:70px;accent-color:var(--ink)">
+        <span style="font-size:.73rem;color:var(--ink);min-width:22px" id="lineWidthVal">1.5</span>
+      </div>
+
+      <!-- Filter panel -->
+      <div class="filter-row">
+        <label>濾鏡</label>
+        <div class="filter-chips">
+          <span class="fchip active" data-mode="none" onclick="setFilter(this,'none')">無</span>
+          <span class="fchip fc-dark" data-mode="dark" onclick="setFilter(this,'dark')">深色</span>
+          <span class="fchip fc-light" data-mode="light" onclick="setFilter(this,'light')">淺色</span>
+          <span class="fchip fc-warm" data-mode="warm" onclick="setFilter(this,'warm')">暖調</span>
+          <span class="fchip fc-cool" data-mode="cool" onclick="setFilter(this,'cool')">冷調</span>
+          <span class="fchip fc-sepia" data-mode="sepia" onclick="setFilter(this,'sepia')">褪色</span>
+          <span class="fchip fc-custom" data-mode="custom" onclick="setFilter(this,'custom')">自訂</span>
+        </div>
+        <input type="color" id="filterColorPicker" value="#ede8dc"
+          style="width:21px;height:21px;border:1px solid rgba(26,20,16,.25);border-radius:50%;padding:0;cursor:pointer;background:none;outline:none;-webkit-appearance:none;overflow:hidden;flex-shrink:0;display:none"
+          oninput="applyFilter()" onchange="applyFilter()">
+        <label style="margin-left:.7rem">透明度</label>
+        <input type="range" id="filterOpacity" min="0" max="95" value="35" style="width:80px;accent-color:var(--ink)">
+        <span style="font-size:.73rem;color:var(--ink);min-width:26px" id="filterOpacityVal">35</span>%
       </div>
 
       <div class="btn-row">
-        <button class="btn" onclick="traceBottle()">✦ 繪製線稿</button>
+        <button class="btn" onclick="traceBottle()">✦ 重新繪製線稿</button>
         <button class="btn outline" onclick="clearLine()">清除線稿</button>
         <button class="btn accent" onclick="showPreview()">生成介紹卡</button>
         <button class="btn outline" onclick="resetAll()">重新上傳</button>
       </div>
 
+      <div class="section-label">清酒筆記</div>
       <div class="notes-paper">
-        <div class="sake-stamp">
-          <span class="sm">清酒</span>
-          <span>SAKE</span>
-          <span>品評</span>
-        </div>
-
+        <div class="sake-stamp"><span class="sm">清酒</span><span>SAKE</span><span>品評</span></div>
         <div class="note-title" id="noteTitle">清酒名稱</div>
-
         <div class="note-grid">
+
+          <!-- 酒名 -->
           <div class="note-field">
-            <label>酒名 <span class="ja">銘柄</span></label>
-            <input id="f_name" type="text" placeholder="例：獺祭 二割三分" oninput="liveTitle()">
+            <div class="field-head">
+              <label>酒名 <span class="ja">銘柄</span></label>
+              <div class="fstyle">
+                <input type="color" value="#1a1410" title="文字顏色"
+                  oninput="applyStyle('f_name',this.value,null)"
+                  onchange="applyStyle('f_name',this.value,null)">
+                <select title="字級" onchange="applyStyle('f_name',null,this.value)">
+                  <option value="0.88rem">小</option>
+                  <option value="1.05rem" selected>中</option>
+                  <option value="1.28rem">大</option>
+                  <option value="1.55rem">特大</option>
+                </select>
+              </div>
+            </div>
+            <input id="f_name" type="text" placeholder="例：獺祭 二割三分"
+              style="font-size:1.05rem;color:#1a1410" oninput="liveTitle()">
           </div>
+
+          <!-- 酒造 -->
           <div class="note-field">
-            <label>酒造 <span class="ja">蔵元</span></label>
-            <input id="f_brewery" type="text" placeholder="例：旭酒造">
+            <div class="field-head">
+              <label>酒造 <span class="ja">蔵元</span></label>
+              <div class="fstyle">
+                <input type="color" value="#1a1410" title="文字顏色"
+                  oninput="applyStyle('f_brewery',this.value,null)"
+                  onchange="applyStyle('f_brewery',this.value,null)">
+                <select title="字級" onchange="applyStyle('f_brewery',null,this.value)">
+                  <option value="0.88rem">小</option>
+                  <option value="1.05rem" selected>中</option>
+                  <option value="1.28rem">大</option>
+                  <option value="1.55rem">特大</option>
+                </select>
+              </div>
+            </div>
+            <input id="f_brewery" type="text" placeholder="例：旭酒造"
+              style="font-size:1.05rem;color:#1a1410">
           </div>
+
+          <!-- 產地 -->
           <div class="note-field">
-            <label>產地 <span class="ja">産地</span></label>
-            <input id="f_origin" type="text" placeholder="例：山口縣岩國市">
+            <div class="field-head">
+              <label>產地 <span class="ja">産地</span></label>
+              <div class="fstyle">
+                <input type="color" value="#1a1410" title="文字顏色"
+                  oninput="applyStyle('f_origin',this.value,null)"
+                  onchange="applyStyle('f_origin',this.value,null)">
+                <select title="字級" onchange="applyStyle('f_origin',null,this.value)">
+                  <option value="0.88rem">小</option>
+                  <option value="1.05rem" selected>中</option>
+                  <option value="1.28rem">大</option>
+                  <option value="1.55rem">特大</option>
+                </select>
+              </div>
+            </div>
+            <input id="f_origin" type="text" placeholder="例：山口縣岩國市"
+              style="font-size:1.05rem;color:#1a1410">
           </div>
+
+          <!-- 年份 -->
           <div class="note-field">
-            <label>年份 <span class="ja">年度</span></label>
-            <input id="f_year" type="text" placeholder="例：令和六年">
+            <div class="field-head">
+              <label>年份 <span class="ja">年度</span></label>
+              <div class="fstyle">
+                <input type="color" value="#1a1410" title="文字顏色"
+                  oninput="applyStyle('f_year',this.value,null)"
+                  onchange="applyStyle('f_year',this.value,null)">
+                <select title="字級" onchange="applyStyle('f_year',null,this.value)">
+                  <option value="0.88rem">小</option>
+                  <option value="1.05rem" selected>中</option>
+                  <option value="1.28rem">大</option>
+                  <option value="1.55rem">特大</option>
+                </select>
+              </div>
+            </div>
+            <input id="f_year" type="text" placeholder="例：令和六年"
+              style="font-size:1.05rem;color:#1a1410">
           </div>
+
+          <!-- 釀造類別 -->
           <div class="note-field">
-            <label>釀造類別 <span class="ja">種別</span></label>
-            <input id="f_type" type="text" placeholder="例：純米大吟釀">
+            <div class="field-head">
+              <label>釀造類別 <span class="ja">種別</span></label>
+              <div class="fstyle">
+                <input type="color" value="#1a1410" title="文字顏色"
+                  oninput="applyStyle('f_type',this.value,null)"
+                  onchange="applyStyle('f_type',this.value,null)">
+                <select title="字級" onchange="applyStyle('f_type',null,this.value)">
+                  <option value="0.88rem">小</option>
+                  <option value="1.05rem" selected>中</option>
+                  <option value="1.28rem">大</option>
+                  <option value="1.55rem">特大</option>
+                </select>
+              </div>
+            </div>
+            <input id="f_type" type="text" placeholder="例：純米大吟釀"
+              style="font-size:1.05rem;color:#1a1410">
           </div>
+
+          <!-- 精米步合 -->
           <div class="note-field">
-            <label>精米步合 <span class="ja">精米歩合</span></label>
-            <input id="f_rice" type="text" placeholder="例：23%">
+            <div class="field-head">
+              <label>精米步合 <span class="ja">精米歩合</span></label>
+              <div class="fstyle">
+                <input type="color" value="#1a1410" title="文字顏色"
+                  oninput="applyStyle('f_rice',this.value,null)"
+                  onchange="applyStyle('f_rice',this.value,null)">
+                <select title="字級" onchange="applyStyle('f_rice',null,this.value)">
+                  <option value="0.88rem">小</option>
+                  <option value="1.05rem" selected>中</option>
+                  <option value="1.28rem">大</option>
+                  <option value="1.55rem">特大</option>
+                </select>
+              </div>
+            </div>
+            <input id="f_rice" type="text" placeholder="例：23%"
+              style="font-size:1.05rem;color:#1a1410">
           </div>
+
+          <!-- 口感品評 -->
           <div class="note-field full">
-            <label>口感品評 <span class="ja">テイスティング</span></label>
-            <textarea id="f_taste" rows="3" placeholder="例：清雅細膩，入口如花香瀰漫，帶梨與白桃果香，酸度優雅，餘韻悠長綿密。"></textarea>
+            <div class="field-head">
+              <label>口感品評 <span class="ja">テイスティング</span></label>
+              <div class="fstyle">
+                <input type="color" value="#1a1410" title="文字顏色"
+                  oninput="applyStyle('f_taste',this.value,null)"
+                  onchange="applyStyle('f_taste',this.value,null)">
+                <select title="字級" onchange="applyStyle('f_taste',null,this.value)">
+                  <option value="0.82rem">小</option>
+                  <option value="1.0rem" selected>中</option>
+                  <option value="1.18rem">大</option>
+                  <option value="1.38rem">特大</option>
+                </select>
+              </div>
+            </div>
+            <textarea id="f_taste" rows="3"
+              placeholder="例：清雅細膩，入口如花香瀰漫，帶梨與白桃果香，酸度優雅，餘韻悠長綿密。"
+              style="font-size:1.0rem;color:#1a1410"></textarea>
           </div>
-        </div>
-      </div>
-    </div>
-  </div>
+
+        </div><!-- /note-grid -->
+      </div><!-- /notes-paper -->
+    </div><!-- /notes-panel -->
+  </div><!-- /main-section -->
 
   <!-- Preview card -->
   <div class="preview-card" id="previewCard">
@@ -514,34 +464,15 @@ body{
       <div class="preview-notes">
         <div class="prev-name" id="prev_name">—</div>
         <div class="prev-fields">
-          <div class="pf">
-            <div class="pf-label">產地 / 産地</div>
-            <div class="pf-value" id="prev_origin">—</div>
-          </div>
-          <div class="pf">
-            <div class="pf-label">酒造 / 蔵元</div>
-            <div class="pf-value" id="prev_brewery">—</div>
-          </div>
-          <div class="pf">
-            <div class="pf-label">年份</div>
-            <div class="pf-value" id="prev_year">—</div>
-          </div>
-          <div class="pf">
-            <div class="pf-label">釀造類別</div>
-            <div class="pf-value" id="prev_type">—</div>
-          </div>
-          <div class="pf">
-            <div class="pf-label">精米步合</div>
-            <div class="pf-value" id="prev_rice">—</div>
-          </div>
-          <div class="pf full">
-            <div class="pf-label">口感品評</div>
-            <div class="pf-value" id="prev_taste">—</div>
-          </div>
+          <div class="pf"><div class="pf-label">產地 / 産地</div><div class="pf-value" id="prev_origin">—</div></div>
+          <div class="pf"><div class="pf-label">酒造 / 蔵元</div><div class="pf-value" id="prev_brewery">—</div></div>
+          <div class="pf"><div class="pf-label">年份</div><div class="pf-value" id="prev_year">—</div></div>
+          <div class="pf"><div class="pf-label">釀造類別</div><div class="pf-value" id="prev_type">—</div></div>
+          <div class="pf"><div class="pf-label">精米步合</div><div class="pf-value" id="prev_rice">—</div></div>
+          <div class="pf full"><div class="pf-label">口感品評</div><div class="pf-value" id="prev_taste">—</div></div>
         </div>
       </div>
     </div>
-    <!-- Brush decoration -->
     <svg class="brush-deco" width="200" height="200" viewBox="0 0 200 200" fill="none">
       <path d="M20,180 Q60,100 100,80 Q140,60 170,20" stroke="#1a1410" stroke-width="8" stroke-linecap="round" fill="none"/>
       <path d="M15,185 Q55,105 95,85 Q135,65 165,25" stroke="#1a1410" stroke-width="2" stroke-linecap="round" fill="none"/>
@@ -556,12 +487,11 @@ body{
       <option value="2" selected>高清 2×</option>
       <option value="3">超清 3×</option>
     </select>
-    <button class="btn green" onclick="exportPNG()">⬇ 匯出 PNG</button>
-    <button class="btn blue"  onclick="exportJPG()">⬇ 匯出 JPG</button>
+    <button class="btn green" onclick="exportPNG()">⬇ PNG</button>
+    <button class="btn blue"  onclick="exportJPG()">⬇ JPG</button>
     <button class="btn outline" onclick="exportBottleOnly()">🍶 僅線稿 PNG</button>
   </div>
 
-  <!-- GitHub -->
   <div class="github-bar">
     <a href="https://github.com/" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
@@ -571,15 +501,103 @@ body{
 </div>
 
 <script>
-// ── State ──
+// ─── State ───
 let uploadedImage = null;
-let photoCtx = null, lineCtx = null;
+let photoCtx = null, lineCtx = null, filterCtx = null;
 const W = 270, H = 510;
+let lineColor = '#1a1410';
 
-// ── Upload ──
+const fieldStyles = {
+  f_name:    {color:'#1a1410', size:'1.05rem'},
+  f_brewery: {color:'#1a1410', size:'1.05rem'},
+  f_origin:  {color:'#1a1410', size:'1.05rem'},
+  f_year:    {color:'#1a1410', size:'1.05rem'},
+  f_type:    {color:'#1a1410', size:'1.05rem'},
+  f_rice:    {color:'#1a1410', size:'1.05rem'},
+  f_taste:   {color:'#1a1410', size:'1.0rem'},
+};
+
+// ─── Apply per-field style ───
+function applyStyle(id, color, size) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (color !== null) { fieldStyles[id].color = color; el.style.color = color; }
+  if (size  !== null) { fieldStyles[id].size  = size;  el.style.fontSize = size; }
+}
+
+// ─── Line color: preset pills ───
+function setTone(pill, color) {
+  document.querySelectorAll('.tone-pill').forEach(p => p.classList.remove('active'));
+  pill.classList.add('active');
+  lineColor = color;
+  document.getElementById('lineColorPicker').value = color;
+  traceBottle();
+}
+
+// ─── Line color: free picker ───
+function setCustomLineColor(color) {
+  document.querySelectorAll('.tone-pill').forEach(p => p.classList.remove('active'));
+  lineColor = color;
+  traceBottle();
+}
+
+function hexToRgb(hex) {
+  const h = hex.replace('#','');
+  return {
+    r: parseInt(h.slice(0,2),16),
+    g: parseInt(h.slice(2,4),16),
+    b: parseInt(h.slice(4,6),16)
+  };
+}
+
+// ─── Filter state ───
+let filterMode = 'none';
+const FILTER_COLORS = {
+  dark:  {r:0,   g:0,   b:0  },
+  light: {r:255, g:250, b:240},
+  warm:  {r:180, g:100, b:30 },
+  cool:  {r:40,  g:90,  b:160},
+  sepia: {r:139, g:111, b:71 },
+};
+
+function setFilter(chip, mode) {
+  document.querySelectorAll('.fchip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  filterMode = mode;
+  // Show/hide custom color picker
+  const picker = document.getElementById('filterColorPicker');
+  picker.style.display = mode === 'custom' ? 'block' : 'none';
+  applyFilter();
+}
+
+function applyFilter() {
+  const fc = document.getElementById('filterCanvas');
+  if (!fc) return;
+  const ctx = fc.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  if (filterMode === 'none') return;
+
+  const opacity = parseInt(document.getElementById('filterOpacity').value) / 100;
+  let r, g, b;
+
+  if (filterMode === 'custom') {
+    const hex = document.getElementById('filterColorPicker').value;
+    const rgb = hexToRgb(hex);
+    r = rgb.r; g = rgb.g; b = rgb.b;
+  } else {
+    const fc2 = FILTER_COLORS[filterMode];
+    r = fc2.r; g = fc2.g; b = fc2.b;
+  }
+
+  ctx.globalAlpha = opacity;
+  ctx.fillStyle = `rgb(${r},${g},${b})`;
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = 1;
+}
+
+// ─── Upload ───
 const uploadZone = document.getElementById('uploadZone');
 const fileInput  = document.getElementById('fileInput');
-
 uploadZone.addEventListener('click', () => fileInput.click());
 uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragging'); });
 uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragging'));
@@ -596,214 +614,321 @@ function loadFile(file) {
     const img = new Image();
     img.onload = () => {
       uploadedImage = img;
-      photoCtx = document.getElementById('photoCanvas').getContext('2d');
-      lineCtx  = document.getElementById('lineCanvas').getContext('2d');
+      photoCtx  = document.getElementById('photoCanvas').getContext('2d');
+      filterCtx = document.getElementById('filterCanvas').getContext('2d');
+      lineCtx   = document.getElementById('lineCanvas').getContext('2d');
       uploadZone.style.display = 'none';
       document.getElementById('mainSection').classList.add('visible');
       drawPhoto();
-      setTimeout(traceBottle, 450);
+      applyFilter();
+      setTimeout(traceBottle, 500);
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-// ── Draw photo (faint background) ──
+// ─── Draw faint photo background ───
 function drawPhoto() {
   if (!uploadedImage || !photoCtx) return;
   const op = parseInt(document.getElementById('opacitySlider').value) / 100;
   photoCtx.clearRect(0, 0, W, H);
-  const s  = Math.min(W / uploadedImage.width, H / uploadedImage.height);
-  const dw = uploadedImage.width * s, dh = uploadedImage.height * s;
-  const dx = (W - dw) / 2,            dy = (H - dh) / 2;
+  const s = Math.min(W/uploadedImage.width, H/uploadedImage.height);
+  const dw = uploadedImage.width*s, dh = uploadedImage.height*s;
   photoCtx.globalAlpha = op;
-  photoCtx.drawImage(uploadedImage, dx, dy, dw, dh);
+  photoCtx.drawImage(uploadedImage, (W-dw)/2, (H-dh)/2, dw, dh);
   photoCtx.globalAlpha = 1;
 }
 
-// ── Sobel edge → hand-drawn lines ──
+// ─── Bottle-only contour tracing ───
+// Technique:
+//   1. Gaussian blur the grayscale image to reduce label texture noise
+//   2. Run Sobel on the blurred image → captures major silhouette edges
+//   3. In the user-defined "label zone" (maskTop% to maskBot% from edges),
+//      additionally suppress all interior pixels (keep only near-silhouette band)
+//   4. Outside label zone: use normal threshold on unblurred image for crispness
 function traceBottle() {
   if (!uploadedImage || !lineCtx) return;
-  const threshold = parseInt(document.getElementById('traceSlider').value);
 
+  const threshold  = parseInt(document.getElementById('traceSlider').value);
+  const maskTopPct = parseInt(document.getElementById('maskTop').value) / 100;
+  const maskBotPct = parseInt(document.getElementById('maskBot').value) / 100;
+  const edgeMargin = parseInt(document.getElementById('marginSlider').value);
+  const lw         = parseFloat(document.getElementById('lineWidthSlider').value);
+  const lc         = hexToRgb(lineColor);
+
+  // Render to off-screen canvas
   const off = document.createElement('canvas');
   off.width = W; off.height = H;
-  const offCtx = off.getContext('2d');
-  const s  = Math.min(W / uploadedImage.width, H / uploadedImage.height);
-  const dw = uploadedImage.width * s, dh = uploadedImage.height * s;
-  offCtx.fillStyle = '#fff';
-  offCtx.fillRect(0, 0, W, H);
-  offCtx.drawImage(uploadedImage, (W-dw)/2, (H-dh)/2, dw, dh);
+  const oc = off.getContext('2d');
+  oc.fillStyle = '#ffffff';
+  oc.fillRect(0, 0, W, H);
+  const s  = Math.min(W/uploadedImage.width, H/uploadedImage.height);
+  const dw = uploadedImage.width*s, dh = uploadedImage.height*s;
+  oc.drawImage(uploadedImage, (W-dw)/2, (H-dh)/2, dw, dh);
 
-  const src = offCtx.getImageData(0, 0, W, H).data;
+  const rawData = oc.getImageData(0, 0, W, H).data;
+
+  // Grayscale
   const gray = new Float32Array(W * H);
-  for (let i = 0; i < W * H; i++) {
-    gray[i] = 0.299*src[i*4] + 0.587*src[i*4+1] + 0.114*src[i*4+2];
+  for (let i = 0; i < W*H; i++) {
+    gray[i] = 0.299*rawData[i*4] + 0.587*rawData[i*4+1] + 0.114*rawData[i*4+2];
   }
 
-  const edges = new Float32Array(W * H);
-  let maxE = 0;
+  // Simple 3×3 Gaussian blur (reduces label text edges)
+  const blurred = new Float32Array(W * H);
+  const gk = [1,2,1, 2,4,2, 1,2,1]; // kernel / 16
   for (let y = 1; y < H-1; y++) {
     for (let x = 1; x < W-1; x++) {
-      const i = y*W+x;
-      const gx = -gray[(y-1)*W+(x-1)] - 2*gray[y*W+(x-1)] - gray[(y+1)*W+(x-1)]
-                 +gray[(y-1)*W+(x+1)] + 2*gray[y*W+(x+1)] + gray[(y+1)*W+(x+1)];
-      const gy = -gray[(y-1)*W+(x-1)] - 2*gray[(y-1)*W+x] - gray[(y-1)*W+(x+1)]
-                 +gray[(y+1)*W+(x-1)] + 2*gray[(y+1)*W+x] + gray[(y+1)*W+(x+1)];
-      edges[i] = Math.sqrt(gx*gx + gy*gy);
-      if (edges[i] > maxE) maxE = edges[i];
+      let v = 0;
+      v += gray[(y-1)*W+(x-1)]*gk[0] + gray[(y-1)*W+x]*gk[1] + gray[(y-1)*W+(x+1)]*gk[2];
+      v += gray[y*W+(x-1)]*gk[3]     + gray[y*W+x]*gk[4]     + gray[y*W+(x+1)]*gk[5];
+      v += gray[(y+1)*W+(x-1)]*gk[6] + gray[(y+1)*W+x]*gk[7] + gray[(y+1)*W+(x+1)]*gk[8];
+      blurred[y*W+x] = v / 16;
     }
   }
 
+  // Sobel on blurred (for silhouette) and raw (for detail outside label zone)
+  function sobel(src) {
+    const e = new Float32Array(W * H);
+    let mx = 0;
+    for (let y = 1; y < H-1; y++) {
+      for (let x = 1; x < W-1; x++) {
+        const i = y*W+x;
+        const gx = -src[(y-1)*W+(x-1)] - 2*src[y*W+(x-1)] - src[(y+1)*W+(x-1)]
+                   +src[(y-1)*W+(x+1)] + 2*src[y*W+(x+1)] + src[(y+1)*W+(x+1)];
+        const gy = -src[(y-1)*W+(x-1)] - 2*src[(y-1)*W+x] - src[(y-1)*W+(x+1)]
+                   +src[(y+1)*W+(x-1)] + 2*src[(y+1)*W+x] + src[(y+1)*W+(x+1)];
+        e[i] = Math.sqrt(gx*gx + gy*gy);
+        if (e[i] > mx) mx = e[i];
+      }
+    }
+    return {e, mx};
+  }
+
+  const {e: edgesBlur, mx: maxBlur} = sobel(blurred);
+  const {e: edgesRaw,  mx: maxRaw}  = sobel(gray);
+
+  const labelTop = Math.floor(H * maskTopPct);
+  const labelBot = Math.floor(H * (1 - maskBotPct));
+
+  // Build final edge binary map
+  const edgeBin = new Uint8Array(W * H);
+  const cutBlur = (threshold / 100) * maxBlur;
+  const cutRaw  = (threshold / 100) * maxRaw;
+
+  for (let y = 1; y < H-1; y++) {
+    const inLabelZone = (y >= labelTop && y <= labelBot);
+
+    // Per-row: find leftmost and rightmost any-edge pixel (blurred for robustness)
+    let leftB = W, rightB = 0;
+    if (inLabelZone) {
+      for (let x = 1; x < W-1; x++) {
+        if (edgesBlur[y*W+x] > cutBlur * 0.5) {
+          if (x < leftB)  leftB  = x;
+          if (x > rightB) rightB = x;
+        }
+      }
+    }
+
+    for (let x = 1; x < W-1; x++) {
+      const i = y*W+x;
+      if (inLabelZone) {
+        // In label zone: use blurred Sobel, keep only near-silhouette band
+        if (edgesBlur[i] > cutBlur) {
+          const nearLeft  = x <= leftB  + edgeMargin;
+          const nearRight = x >= rightB - edgeMargin;
+          if (nearLeft || nearRight) edgeBin[i] = 1;
+        }
+      } else {
+        // Outside label zone: full edge detection (raw)
+        if (edgesRaw[i] > cutRaw) edgeBin[i] = 1;
+      }
+    }
+  }
+
+  // ── Outward expansion (morphological dilation) ──
+  // For every detected edge pixel, find the outward normal direction by
+  // computing a local gradient vector, then shift the drawn pixel outward
+  // by `expand` pixels. This creates a gap between the bottle surface and
+  // the drawn line, giving the hand-drawn "floating outline" feel.
+  const expand = parseInt(document.getElementById('expandSlider').value);
+  const finalBin = new Uint8Array(W * H);
+
+  if (expand <= 0) {
+    // No expansion: copy directly
+    for (let i = 0; i < W*H; i++) finalBin[i] = edgeBin[i];
+  } else {
+    // Build a binary fill map of the bottle interior (flood from center-ish point)
+    // using the edgeBin as boundary — this tells us which direction is "outward".
+    // Simple approach: for each edge pixel, compute local intensity gradient direction
+    // (pointing from dark bottle into light background), then offset outward.
+    for (let y = 1; y < H-1; y++) {
+      for (let x = 1; x < W-1; x++) {
+        if (!edgeBin[y*W+x]) continue;
+        // Gradient from blurred image (bright background → dark bottle → outward = +grad direction)
+        const dx = blurred[y*W+(x+1)] - blurred[y*W+(x-1)];
+        const dy = blurred[(y+1)*W+x] - blurred[(y-1)*W+x];
+        const mag = Math.sqrt(dx*dx + dy*dy) || 1;
+        // Outward normal (towards brighter side = outside bottle)
+        const nx = dx / mag;
+        const ny = dy / mag;
+        // Place line pixel offset outward
+        const tx = Math.round(x + nx * expand);
+        const ty = Math.round(y + ny * expand);
+        if (tx >= 0 && tx < W && ty >= 0 && ty < H) {
+          finalBin[ty*W+tx] = 1;
+          // Fill small radius around target for stroke thickness continuity
+          for (let ky = -1; ky <= 1; ky++) {
+            for (let kx = -1; kx <= 1; kx++) {
+              const fx = tx+kx, fy = ty+ky;
+              if (fx >= 0 && fx < W && fy >= 0 && fy < H) finalBin[fy*W+fx] = 1;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Render to canvas
   lineCtx.clearRect(0, 0, W, H);
   const out = lineCtx.createImageData(W, H);
   const od  = out.data;
-  const cut = (threshold / 100) * maxE;
 
-  for (let i = 0; i < W * H; i++) {
-    const isEdge = edges[i] > cut;
-    const noise  = (Math.random() - 0.5) * 16;
-    const val    = isEdge ? Math.max(0, 26 + noise) : 255;
-    od[i*4]   = val;
-    od[i*4+1] = val - (isEdge ? 4 : 0);
-    od[i*4+2] = val - (isEdge ? 8 : 0);
-    od[i*4+3] = isEdge ? Math.min(255, 215 + noise) : 0;
+  for (let i = 0; i < W*H; i++) {
+    if (finalBin[i]) {
+      const noise = (Math.random()-0.5)*18;
+      od[i*4]   = Math.max(0, Math.min(255, lc.r + Math.round((Math.random()-0.5)*10)));
+      od[i*4+1] = Math.max(0, Math.min(255, lc.g + Math.round((Math.random()-0.5)*8)));
+      od[i*4+2] = Math.max(0, Math.min(255, lc.b + Math.round((Math.random()-0.5)*8)));
+      od[i*4+3] = Math.min(255, 205 + noise);
+    } else {
+      od[i*4+3] = 0;
+    }
   }
   lineCtx.putImageData(out, 0, 0);
-  addBrushTexture(lineCtx, W, H);
-}
 
-function addBrushTexture(ctx, w, h) {
-  ctx.save();
-  ctx.globalAlpha = 0.025;
-  for (let i = 0; i < 90; i++) {
-    const x = Math.random()*w, y = Math.random()*h;
-    const l = Math.random()*14+2;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + l*(Math.random()-.5), y + l*(Math.random()-.5));
-    ctx.strokeStyle = '#1a1410';
-    ctx.lineWidth = Math.random()*2.2;
-    ctx.stroke();
+  // Thicken lines if lw > 1 using blur + composite
+  if (lw > 1.2) {
+    const tmp = document.createElement('canvas');
+    tmp.width = W; tmp.height = H;
+    const tc = tmp.getContext('2d');
+    tc.drawImage(document.getElementById('lineCanvas'), 0, 0);
+    lineCtx.clearRect(0, 0, W, H);
+    lineCtx.filter = `blur(${(lw-1)*0.55}px)`;
+    lineCtx.drawImage(tmp, 0, 0);
+    lineCtx.filter = 'none';
+    lineCtx.globalAlpha = 0.72;
+    lineCtx.drawImage(tmp, 0, 0);
+    lineCtx.globalAlpha = 1;
   }
-  ctx.restore();
+
+  // Subtle brush texture
+  lineCtx.save();
+  lineCtx.globalAlpha = 0.02;
+  for (let i = 0; i < 75; i++) {
+    const x = Math.random()*W, y = Math.random()*H;
+    const l = Math.random()*11+2;
+    lineCtx.beginPath();
+    lineCtx.moveTo(x, y);
+    lineCtx.lineTo(x + l*(Math.random()-.5), y + l*(Math.random()-.5));
+    lineCtx.strokeStyle = `rgb(${lc.r},${lc.g},${lc.b})`;
+    lineCtx.lineWidth = Math.random()*1.8;
+    lineCtx.stroke();
+  }
+  lineCtx.restore();
 }
 
-function clearLine() {
-  if (lineCtx) lineCtx.clearRect(0, 0, W, H);
-}
+function clearLine() { if (lineCtx) lineCtx.clearRect(0, 0, W, H); }
 
-// ── Sliders ──
-document.getElementById('traceSlider').addEventListener('input', function() {
-  document.getElementById('traceVal').textContent = this.value;
-  traceBottle();
-});
-document.getElementById('opacitySlider').addEventListener('input', function() {
-  document.getElementById('opacityVal').textContent = this.value;
-  drawPhoto();
+// ─── Slider listeners ───
+['traceSlider','opacitySlider','maskTop','maskBot','marginSlider','expandSlider','lineWidthSlider','filterOpacity'].forEach(id => {
+  const valId = {
+    traceSlider:'traceVal', opacitySlider:'opacityVal',
+    maskTop:'maskTopVal', maskBot:'maskBotVal',
+    marginSlider:'marginVal', expandSlider:'expandVal',
+    lineWidthSlider:'lineWidthVal', filterOpacity:'filterOpacityVal'
+  }[id];
+  document.getElementById(id).addEventListener('input', function() {
+    if (valId) document.getElementById(valId).textContent = this.value;
+    if (id === 'opacitySlider') drawPhoto();
+    else if (id === 'filterOpacity') applyFilter();
+    else traceBottle();
+  });
 });
 
-// ── Live title ──
+// ─── Live title ───
 function liveTitle() {
   const v = document.getElementById('f_name').value.trim();
   document.getElementById('noteTitle').textContent = v || '清酒名稱';
 }
 
-// ── Preview ──
+// ─── Preview ───
 function showPreview() {
-  const vals = getFields();
-
-  document.getElementById('prev_name').textContent = vals.name || '—';
-  ['origin','brewery','year','type','rice','taste'].forEach(k => {
-    document.getElementById('prev_'+k).textContent = vals[k] || '—';
+  const keys = ['name','brewery','origin','year','type','rice','taste'];
+  keys.forEach(k => {
+    const el  = document.getElementById('prev_'+k);
+    const src = document.getElementById('f_'+k);
+    el.textContent  = src.value.trim() || '—';
+    el.style.color     = fieldStyles['f_'+k].color;
+    el.style.fontSize  = fieldStyles['f_'+k].size;
   });
 
-  // Render preview canvas
-  const pvc  = document.getElementById('previewCanvas');
-  const pCtx = pvc.getContext('2d');
-  pCtx.clearRect(0, 0, 170, 420);
+  const pvc = document.getElementById('previewCanvas');
+  const pc  = pvc.getContext('2d');
+  pc.clearRect(0, 0, 170, 420);
   if (uploadedImage) {
-    const s = Math.min(170/uploadedImage.width, 420/uploadedImage.height);
+    const s  = Math.min(170/uploadedImage.width, 420/uploadedImage.height);
     const dw = uploadedImage.width*s, dh = uploadedImage.height*s;
-    pCtx.globalAlpha = 0.14;
-    pCtx.drawImage(uploadedImage, (170-dw)/2, (420-dh)/2, dw, dh);
-    pCtx.globalAlpha = 1;
+    pc.globalAlpha = 0.12;
+    pc.drawImage(uploadedImage, (170-dw)/2, (420-dh)/2, dw, dh);
+    pc.globalAlpha = 1;
   }
-  pCtx.drawImage(document.getElementById('lineCanvas'), 0, 0, 170, 420);
+  pc.drawImage(document.getElementById('filterCanvas'), 0, 0, 170, 420);
+  pc.drawImage(document.getElementById('lineCanvas'), 0, 0, 170, 420);
 
   document.getElementById('previewCard').classList.add('visible');
   document.getElementById('exportBar').classList.add('visible');
-  document.getElementById('previewCard').scrollIntoView({ behavior:'smooth', block:'start' });
+  document.getElementById('previewCard').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-function getFields() {
-  return {
-    name:    document.getElementById('f_name').value.trim(),
-    brewery: document.getElementById('f_brewery').value.trim(),
-    origin:  document.getElementById('f_origin').value.trim(),
-    year:    document.getElementById('f_year').value.trim(),
-    type:    document.getElementById('f_type').value.trim(),
-    rice:    document.getElementById('f_rice').value.trim(),
-    taste:   document.getElementById('f_taste').value.trim(),
-  };
-}
-
-// ── Export ──
+// ─── Export helpers ───
 function showSpinner(msg) {
-  document.getElementById('spinnerMsg').textContent = msg || '匯出中，請稍候…';
+  document.getElementById('spinnerMsg').textContent = msg || '匯出中…';
   document.getElementById('spinnerOverlay').classList.add('visible');
 }
-function hideSpinner() {
-  document.getElementById('spinnerOverlay').classList.remove('visible');
-}
+function hideSpinner() { document.getElementById('spinnerOverlay').classList.remove('visible'); }
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-async function exportPNG() {
-  await doExport('png');
-}
-async function exportJPG() {
-  await doExport('jpg');
-}
+async function exportPNG() { await doExport('png'); }
+async function exportJPG() { await doExport('jpg'); }
 
 async function doExport(fmt) {
   showSpinner(fmt === 'png' ? '正在生成 PNG…' : '正在生成 JPG…');
-  const scale = parseInt(document.getElementById('sizeSelect').value);
+  const scale  = parseInt(document.getElementById('sizeSelect').value);
   const target = document.getElementById('previewInner');
-
-  // Hide section-label while exporting
-  const sectionLabel = document.querySelector('.preview-card .section-label');
-  const origDisplay = sectionLabel ? sectionLabel.style.display : '';
-  if (sectionLabel) sectionLabel.style.display = 'none';
-
+  const sl     = document.querySelector('.preview-card .section-label');
+  const prev   = sl ? sl.style.display : '';
+  if (sl) sl.style.display = 'none';
   try {
     await document.fonts.ready;
     const canvas = await html2canvas(target, {
-      scale: scale,
-      useCORS: true,
-      backgroundColor: '#ede8dc',
-      logging: false,
+      scale, useCORS:true, backgroundColor:'#ede8dc', logging:false
     });
-
-    const mime = fmt === 'jpg' ? 'image/jpeg' : 'image/png';
-    const quality = fmt === 'jpg' ? 0.92 : 1.0;
-    const url = canvas.toDataURL(mime, quality);
-
-    const sakeName = document.getElementById('f_name').value.trim().replace(/\s+/g,'-') || 'sake-note';
+    const mime = fmt==='jpg' ? 'image/jpeg' : 'image/png';
+    const url  = canvas.toDataURL(mime, fmt==='jpg' ? 0.92 : 1.0);
+    const name = (document.getElementById('f_name').value.trim().replace(/\s+/g,'-') || 'sake-note');
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `${sakeName}.${fmt === 'jpg' ? 'jpg' : 'png'}`;
-    a.click();
+    a.href = url; a.download = `${name}.${fmt}`; a.click();
     showToast(`✦ 已匯出 ${fmt.toUpperCase()}，品飲愉快！`);
   } catch(e) {
-    showToast('匯出失敗，請再試一次');
-    console.error(e);
+    showToast('匯出失敗，請再試一次'); console.error(e);
   } finally {
-    if (sectionLabel) sectionLabel.style.display = origDisplay;
+    if (sl) sl.style.display = prev;
     hideSpinner();
   }
 }
@@ -811,27 +936,19 @@ async function doExport(fmt) {
 async function exportBottleOnly() {
   showSpinner('正在匯出線稿…');
   try {
-    const lc  = document.getElementById('lineCanvas');
-    const offC = document.createElement('canvas');
-    offC.width  = lc.width;
-    offC.height = lc.height;
-    const ctx = offC.getContext('2d');
+    const lc = document.getElementById('lineCanvas');
+    const oc = document.createElement('canvas');
+    oc.width = lc.width; oc.height = lc.height;
+    const ctx = oc.getContext('2d');
     ctx.fillStyle = '#f7f3ec';
-    ctx.fillRect(0, 0, offC.width, offC.height);
+    ctx.fillRect(0, 0, oc.width, oc.height);
     ctx.drawImage(lc, 0, 0);
-
-    const url = offC.toDataURL('image/png');
-    const sakeName = document.getElementById('f_name').value.trim().replace(/\s+/g,'-') || 'sake-bottle';
+    const name = (document.getElementById('f_name').value.trim().replace(/\s+/g,'-') || 'sake-bottle');
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `${sakeName}-lineart.png`;
-    a.click();
+    a.href = oc.toDataURL('image/png'); a.download = `${name}-lineart.png`; a.click();
     showToast('✦ 線稿已匯出！');
-  } catch(e) {
-    showToast('匯出失敗');
-  } finally {
-    hideSpinner();
-  }
+  } catch(e) { showToast('匯出失敗'); }
+  finally { hideSpinner(); }
 }
 
 function resetAll() {
@@ -845,8 +962,11 @@ function resetAll() {
     document.getElementById(id).value = '';
   });
   document.getElementById('noteTitle').textContent = '清酒名稱';
-  if (photoCtx) photoCtx.clearRect(0, 0, W, H);
-  if (lineCtx)  lineCtx.clearRect(0, 0, W, H);
+  if (photoCtx)  photoCtx.clearRect(0, 0, W, H);
+  if (filterCtx) filterCtx.clearRect(0, 0, W, H);
+  if (lineCtx)   lineCtx.clearRect(0, 0, W, H);
+  filterMode = 'none';
+  document.querySelectorAll('.fchip').forEach((c,i) => c.classList.toggle('active', i===0));
 }
 </script>
 </body>
